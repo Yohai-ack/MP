@@ -1,0 +1,55 @@
+Hi
+
+ 
+
+I have written a program (see on mech8, the computer you’ve used)
+
+ 
+
+The servo motor assumes an angle based on the width of a train of pulses sent to it. The pulses come at a specific rate of 50 pulses per second (this is a standard for servo motors)
+
+ 
+
+  The project doing that is zipped in here https://www.dropbox.com/t/XmzqDDdgX5H9jqn8
+
+ 
+
+A few lines of explanation.
+
+The array (vector) servoPositionsUs contains 3 elements stating the width of the pulse sent to the servo motor in microseconds,
+
+ 
+
+The middle point (0 degrees) is for a pulse 1500 microseconds wide; if you add or subtract 900 microseconds, you reach one of the extreme angles the servo can provide.
+
+If you want the servo to stay at ZERO degrees, make all 3 elements RC_PWM_CENTER_US
+
+ 
+
+static const uint16_t servoPositionsUs[3] = {
+
+  RC_PWM_MAX_US,      /* maximum rotation */
+
+  RC_PWM_CENTER_US,   /* middle (0 deg)   */
+
+  RC_PWM_MIN_US       /* minimum rotation */
+
+};
+
+ 
+
+static void applyServoPosition(uint8_t index)
+
+{
+
+  setAllServos(servoPositionsUs[index]); ß this line sets the SERVO angle according to the index =0,1,2 (3 positions)
+
+  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+
+  snprintf(printBuf, sizeof(printBuf), "Servo CH0...CH%d -> %s\r\n",
+
+           PCA9685_CHANNEL_COUNT - 1, servoPositionNames[index]);
+
+  serialPrint(printBuf);
+
+}

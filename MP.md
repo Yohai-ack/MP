@@ -100,6 +100,9 @@ isn't stated anywhere. It may be the quiz; ask Yohai or Bucher.
 
 ### 4.4 Divergences to keep in mind
 
+Syllabus consistency is Bucher's responsibility, not a focus of ours (Yohai, 2026-10-02). Note a
+divergence when it affects an assignment, tutorial or quiz. Otherwise don't chase it.
+
 - **Two syllabi exist.** `syllabus_G474_cart_2026.docx` matches `course_plan_2026_deck_v2.pptx`
   and is treated as **current**. `syllabus_I2C_IOboard_2026` is an earlier variant (different lab
   split: cart basics / Mecanum / IO board / sonar). Confirm with Yohai before relying on either one
@@ -139,6 +142,7 @@ new_pcb_demo.zip, test_pcb2a.zip
 
 ```
 MP.md                          this file
+CLAUDE.md                      auto-loaded pointer to this file
 general/rolling doc MP course.docx   Yohai's running list of understanding questions
 hardwaret_test/                CubeIDE project (G474RE; align_servo.ioc; HardwareTest + servo builds)
                                + mailFromBucher_100826.txt (servo pulse explanation)
@@ -167,4 +171,3 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
 1. What is the remaining 9% of the grade (the quiz?).
 2. Is 12 or 13 meetings correct for the actual timetable, and which lesson file maps to which week?
 3. Servo pulse range: 1000–2000 µs (syllabus) or 1500 ± 900 µs (Bucher's servo program)?
-4. Should `hardwaret_test/` and `debug_011026/` go into git too, or only the new course documents?
