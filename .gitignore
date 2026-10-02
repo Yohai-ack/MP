@@ -1,0 +1,14 @@
+# CubeIDE build output
+Debug/
+Release/
+*.elf
+*.o
+*.d
+*.su
+*.cyclo
+*.map
+*.list
+# Eclipse workspace metadata
+.metadata/
+# Office lock files
+~$*
