@@ -12,3 +12,14 @@ Release/
 .metadata/
 # Office lock files
 ~$*
+# LaTeX build output
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+# compiled plan PDF (source .tex only)
+MP2026_plan.pdf
+ass_*_ioc.pdf

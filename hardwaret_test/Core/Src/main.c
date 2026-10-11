@@ -20,6 +20,12 @@
   *   13       all 8 RGB LEDs constant white
   *   14       all 8 RGB LEDs blink (0.5 s on, 0.5 s off -> 1 s period)
   *   15       all 8 RGB LEDs fade red -> green -> blue -> white
+  *   16       I2C buttons: button n (PCA9538A bit n-1) toggles wheel n on/off;
+  *            RGB LED n-1 shows green while wheel n runs
+  *   17       bounce test: counts raw press edges of I2C button 1 (polled as
+  *            fast as possible) and raw rising edges of the blue Nucleo
+  *            button B1 (EXTI), with NO debouncing. Press each one 20 times:
+  *            a count above 20 means the button bounces.
   *   other    top motor -> MIDDLE (same fall-through as the old servo test)
   *
   * IR sensor (PA7) is tested in every state: the moment it detects an
@@ -72,6 +78,13 @@
 #define PCA9634_PWM0          0x02
 #define PCA9634_LEDOUT0       0x0C
 #define PCA9634_LEDOUT1       0x0D
+
+#define PCA9538A_INPUT        0x00
+#define PCA9538A_POLARITY     0x02
+#define PCA9538A_CONFIG       0x03
+#define BUTTON_COUNT          4U
+#define BUTTON_MASK           0x0FU   /* buttons on bits 0..3, active-low    */
+#define BUTTON_POLL_MS        10UL    /* two equal reads 10 ms apart = stable */
 
 #define PCA9685_MODE1         0x00
 #define PCA9685_MODE2         0x01
@@ -126,7 +139,9 @@
 #define ST_LED_CONSTANT       13
 #define ST_LED_BLINK          14
 #define ST_LED_FADE           15
-#define ST_LAST_DEFINED       15
+#define ST_BUTTON_WHEELS      16
+#define ST_BOUNCE_TEST        17
+#define ST_LAST_DEFINED       17
 
 /* USER CODE END PD */
 
@@ -237,6 +252,21 @@ static volatile uint32_t usPulseUs       = 0;
 static volatile uint8_t  usEverValid     = 0;
 static volatile uint32_t usLastValidTick = 0;
 
+/* State 16: buttons toggle wheels. 'buttonsPressed' bit n = button n held
+   (already inverted from active-low and debounced). */
+volatile uint8_t buttonsPressed = 0;
+static uint8_t  buttonRawLast    = 0;
+static uint8_t  wheelOn[WHEEL_COUNT] = {0};
+static uint8_t  buttonChipOk     = 0;
+static uint32_t lastButtonPollMs = 0;
+
+/* State 17: raw edge counts, no debouncing. Visible in Live Expressions. */
+volatile uint32_t i2cButtonEdgeCount = 0;   /* I2C button 1 press edges        */
+volatile uint32_t b1EdgeCount        = 0;   /* B1 rising edges, from the EXTI  */
+static uint8_t  bounceLastHeld      = 0;
+static uint32_t bounceShownI2c      = 0;
+static uint32_t bounceShownB1       = 0;
+
 static uint32_t lastStatusPrintMs = 0;
 static char     printBuf[256];
 
@@ -291,6 +321,12 @@ static void     updateEncoders(void);
 /* sensors */
 static void     updateIrSensor(void);
 static void     updateDistanceUS(void);
+/* buttons (PCA9538A) */
+static uint8_t  readButtons(uint8_t *pressed);
+static void     enterButtonWheels(void);
+static void     updateButtonWheels(void);
+static void     enterBounceTest(void);
+static void     updateBounceTest(void);
 /* state machine */
 static void     enterState(uint8_t stateValue);
 static void     runStateTick(uint8_t stateValue);
@@ -648,6 +684,117 @@ static void updateDistanceUS(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* State 16: PCA9538A buttons toggle the wheels                        */
+/* ------------------------------------------------------------------ */
+
+/* Reads the INPUT register. Returns 1 on success; *pressed gets bit n = 1
+   while button n is held (the chip reports active-low, so it is inverted). */
+static uint8_t readButtons(uint8_t *pressed)
+{
+  uint8_t raw;
+  if (HAL_I2C_Mem_Read(&hi2c1, (uint16_t)(PCA9538A_ADDR << 1), PCA9538A_INPUT,
+                       I2C_MEMADD_SIZE_8BIT, &raw, 1, 10) != HAL_OK) {
+    return 0;
+  }
+  *pressed = (uint8_t)(~raw) & BUTTON_MASK;
+  return 1;
+}
+
+static void enterButtonWheels(void)
+{
+  /* power-on default is already all-inputs, no inversion; set it explicitly */
+  buttonChipOk = writeRegister(PCA9538A_ADDR, PCA9538A_CONFIG, 0xFF)
+              && writeRegister(PCA9538A_ADDR, PCA9538A_POLARITY, 0x00)
+              && readButtons(&buttonRawLast);
+
+  for (uint8_t wheel = 0; wheel < WHEEL_COUNT; wheel++) wheelOn[wheel] = 0;
+  buttonsPressed   = buttonChipOk ? buttonRawLast : 0;  /* held at entry = not a press */
+  lastButtonPollMs = HAL_GetTick();
+
+  serialPrint(buttonChipOk
+    ? "state=16 : BUTTONS - button n toggles wheel n (LED n-1 green = running)\r\n"
+    : "state=16 : BUTTONS - PCA9538A (0x71) not answering, nothing to do\r\n");
+}
+
+/* Polled every BUTTON_POLL_MS: one I2C read (~0.4 ms), so the loop is never
+   blocked for long. A level counts only after two equal reads in a row
+   (debounce), and a wheel toggles on the press edge only (one press = one
+   action), not while the button is held. */
+static void updateButtonWheels(void)
+{
+  if (!buttonChipOk) return;
+
+  uint32_t now = HAL_GetTick();
+  if (now - lastButtonPollMs < BUTTON_POLL_MS) return;
+  lastButtonPollMs = now;
+
+  uint8_t raw;
+  if (!readButtons(&raw)) return;
+  uint8_t stable = (uint8_t)(raw & buttonRawLast);   /* held in both reads */
+  buttonRawLast = raw;
+
+  uint8_t newPresses = (uint8_t)(stable & ~buttonsPressed);
+  buttonsPressed = (uint8_t)((buttonsPressed & raw) | stable);
+
+  for (uint8_t wheel = 0; wheel < WHEEL_COUNT; wheel++) {
+    if (newPresses & (1U << wheel)) {
+      wheelOn[wheel] = !wheelOn[wheel];
+      snprintf(printBuf, sizeof(printBuf), "button %u -> wheel %u %s\r\n",
+               (unsigned)(wheel + 1U), (unsigned)(wheel + 1U),
+               wheelOn[wheel] ? "ON (forward)" : "OFF");
+      serialPrint(printBuf);
+    }
+    /* re-applied every poll so a live change of 'motorPwm' takes effect */
+    if (wheelOn[wheel]) startWheel(wheel, 1);
+    else                setWheelPwm(wheel, 0);
+    rgbTargetGreen[wheel] = wheelOn[wheel] ? LED_ON_LEVEL : 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* State 17: bounce test, raw edges with no debouncing                 */
+/* ------------------------------------------------------------------ */
+static void enterBounceTest(void)
+{
+  uint8_t pressed = 0;
+  buttonChipOk = writeRegister(PCA9538A_ADDR, PCA9538A_CONFIG, 0xFF)
+              && readButtons(&pressed);
+  bounceLastHeld     = pressed & 0x01U;
+  i2cButtonEdgeCount = 0;
+  b1EdgeCount        = 0;
+  bounceShownI2c     = 0;
+  bounceShownB1      = 0;
+
+  serialPrint("state=17 : BOUNCE TEST - press I2C button 1 and the blue B1 button\r\n"
+              "           20 times each; a count above 20 = bouncing\r\n");
+  if (!buttonChipOk) serialPrint("           (PCA9538A not answering: only B1 is counted)\r\n");
+}
+
+/* Polled on EVERY loop pass (no rate limit, no debounce): the fastest the
+   I2C bus allows, about one read per 0.4 ms. Prints only when a count changes. */
+static void updateBounceTest(void)
+{
+  if (buttonChipOk) {
+    uint8_t pressed;
+    if (readButtons(&pressed)) {
+      uint8_t held = pressed & 0x01U;
+      if (held && !bounceLastHeld) i2cButtonEdgeCount++;
+      bounceLastHeld = held;
+    }
+  }
+
+  uint32_t i2cCount = i2cButtonEdgeCount;
+  uint32_t b1Count  = b1EdgeCount;
+  if ((i2cCount != bounceShownI2c) || (b1Count != bounceShownB1)) {
+    bounceShownI2c = i2cCount;
+    bounceShownB1  = b1Count;
+    snprintf(printBuf, sizeof(printBuf), "I2C button 1 edges = %lu | B1 edges = %lu\r\n",
+             (unsigned long)i2cCount, (unsigned long)b1Count);
+    serialPrint(printBuf);
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* State machine                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -708,6 +855,14 @@ static void enterState(uint8_t stateValue)
       serialPrint("state=15 : LEDs fading red -> green -> blue -> white\r\n");
       break;
 
+    case ST_BUTTON_WHEELS:
+      enterButtonWheels();
+      break;
+
+    case ST_BOUNCE_TEST:
+      enterBounceTest();
+      break;
+
     default:
       /* states 1, 2, 3 were already handled by the top motor code above;
          anything above 15 fell through to MIDDLE. */
@@ -734,6 +889,8 @@ static void runStateTick(uint8_t stateValue)
     case ST_US_DISTANCE:  updateDistanceUS(); break;
     case ST_LED_BLINK:    updateLedBlink();   break;
     case ST_LED_FADE:     updateLedFade();    break;
+    case ST_BUTTON_WHEELS: updateButtonWheels(); break;
+    case ST_BOUNCE_TEST:   updateBounceTest();   break;
     default:                                  break;  /* nothing to do */
   }
 }
@@ -751,6 +908,8 @@ static void printStateTable(void)
   serialPrint("  13       LEDs constant white\r\n");
   serialPrint("  14       LEDs blinking (1 s)\r\n");
   serialPrint("  15       LEDs fading colours\r\n");
+  serialPrint("  16       I2C buttons: button n toggles wheel n\r\n");
+  serialPrint("  17       bounce test: raw edge counts, I2C button 1 and B1\r\n");
   serialPrint("  other    top motor -> MIDDLE\r\n");
   serialPrint("IR obstacle at any time -> state = 0\r\n");
 }
@@ -1350,7 +1509,8 @@ static void MX_GPIO_Init(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == B1_Pin) {
-    /* blue user button - unused in this test */
+    /* state 17: every rising edge on PC13 is counted, bounce included */
+    b1EdgeCount++;
   }
 }
 

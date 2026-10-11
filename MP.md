@@ -4,15 +4,15 @@ This file is the context for the **Microprocessor-Based Product Design** course.
 of every session, so Yohai never has to re-explain the course. Keep it current: when something about
 the course is settled, update this file in the same session.
 
----
-
 ## 1. Who, what, when
 
 - **Course:** Microprocessor-Based Product Design (MP), Technion, Faculty of Mechanical Engineering,
   2026/27 winter semester.
-- **Lecturer:** Prof. Izhak Bucher. **TA:** Yohai Ackerman (that's who I work for).
-- **Dates:** semester begins **2026-10-28**, runs to about **April 2027**. About 12–13 meetings,
-  each a 2 h lecture + 1 h tutorial. Lab work is self-run in **Room 26** (Robotics/Manufacturing
+- **Lecturer:** Prof. Izhak Bucher. **TA:** Yohai Ackerman (that's who I work for), and he's the
+  **only TA this year**. In 2025 there were two: Yohai and Rami Sabbagh. So 2025 tutorials may be
+  Rami's work.
+- **Dates:** semester begins **2026-10-28**, ends **2027-01-28**. A3 is due later, on 3.3.2027. 13 meetings:
+  sessions 1 to 12 are each a 2 h lecture + 1 h tutorial, and session 13 is a lab meeting. Lab work is self-run in **Room 26** (Robotics/Manufacturing
   building).
 - **Students** know Python, not C. Two lectures bridge Python → C.
 - **Yohai's own level:** somewhat familiar with STM32, still learning. He prepares before the
@@ -25,6 +25,8 @@ the course is settled, update this file in the same session.
 | `C:\Users\yohai\git_codes\STM32\` (this folder, and all subfolders) | Yohai's **private** working folder. Bucher has **no** access. Git repo → `https://github.com/Yohai-ack/MP.git` | **Read and write**, but only on Yohai's request or as these rules say |
 | `C:\Users\yohai\OneDrive - Technion\Izhak Bucher's files - shared_2026\` | Bucher's shared folder. Yohai has write access, and puts files there when he wants Bucher to see them | **READ-ONLY, ALWAYS.** Never write, move, rename or delete anything there, even if asked in passing. If Yohai wants something placed there, I prepare it in `STM32\` and he copies it himself |
 
+- **Last year's folder** `C:\Users\yohai\OneDrive - Technion\Bucher Izhak's files - Shared_2025\`:
+  **READ-ONLY, ALWAYS**, same rule as above (see §4.6a).
 - Read the shared folder freely to understand the course. Bucher will keep adding material
   (lessons, code), so **re-survey it** when starting a task that depends on it, rather than trusting
   the snapshot in §4.
@@ -45,7 +47,7 @@ the course is settled, update this file in the same session.
 3. **Assignments.** Write **one unified assignments document** covering all labs. Bucher's lessons
    mention assignments piecemeal; the unified doc is ours. Then **solve** the assignments (reference
    solutions).
-4. **Quiz.** This semester probably includes a quiz. Help write it (and its solution).
+4. **Quizzes.** Two quizzes (lectures 4 and 8). Help write them and their solutions.
 5. **Grading.** Possibly help check submitted assignments.
 
 Course-specific technical conclusions belong here or in a document in this folder, not only in chat.
@@ -54,17 +56,31 @@ Course-specific technical conclusions belong here or in a document in this folde
 
 ### 4.1 Platform — one cart, one MCU
 
+- **Pin/peripheral configuration for students: a "project configuration (.ioc)" section at the end
+  of each assignment** in `MP2026_plan.tex` (Yohai, 2026-10-11; replaced the separate
+  `ass_*_ioc.tex` files, now deleted). Each lists only what that assignment needs, so students
+  aren't confused, and they're **cumulative**: A2's contains everything in A1's, even where A2
+  doesn't use it. A3 may share A2's or get its own. Unconfirmed hardware stays out of them; the
+  open items live in §6 below. All values come from the working hardware-test project
+  (`hardwaret_test/align_servo.ioc` + `main.c`).
+- **USART3 (PC10 TX / PC11 RX, 115200)** is the **wireless module** (used in 2025). It may be used
+  in A3 this year, so it's left out of the A1/A2 docs for now.
+- **History:** in 2025, Lab 1 ran on an older lab system (F446, steppers), and Labs 2–3 on the
+  Mecanum cart (4 DC motors, 4 encoders, one binary IR sensor at the front). **In 2026, every
+  assignment uses the Mecanum cart** ("car" and "cart" mean the same thing). New this year: a
+  servo-gimballed **HC-SR04 ultrasonic** (gives distance, not just presence) and the **I2C board
+  with 8 RGB LEDs** (+ buttons).
 - **NUCLEO-G474RE** (STM32G474RE, Cortex-M4F, 170 MHz) in a **Mecanum-wheel cart**. It's the only
   MCU in the course. The old STM32F446ZE boards and the Wiggler project are retired.
 - **I2C1:** SCL = PB8, SDA = PB9. **printf** over LPUART1 at 115200 8N1 (ST-LINK virtual COM, PuTTY).
 - **I2C IO board:** 8 RGB LEDs via 3× **PCA9634** (one chip per colour: RED 0x01, GREEN 0x02,
   BLUE 0x07; channel n = LED n). 4 buttons on **PCA9538A** at 0x71 (active-low, bits 0–3).
-  **PCA9685** at 0x44 makes 50 Hz servo pulses (PRESCALE = 121, 1000–2000 µs).
+  **PCA9685** at 0x44 makes 50 Hz servo pulses (PRESCALE = 121).
 - **Servo + HC-SR04 sonar** (scanning "radar"). Trigger from an MCU pin; echo measured by timer
-  input capture. Per Bucher's mail (2026-08-10), servo centre is 1500 µs and ±900 µs reaches the
-  extremes. That is wider than the syllabus's 1000–2000 µs, so check which one is meant.
+  input capture. The working test code uses **900 / 1500 / 2100 µs** (min/centre/max), so use
+  that, not the syllabus's 1000–2000 µs.
 - **4 DC motors + quadrature encoders**, through H-bridges (timer PWM).
-- **Optical on/off proximity sensor**: a digital input, later used with EXTI.
+- **IR on/off obstacle sensor** at the front (PA7, active-low): a digital input, later used with EXTI.
 - Power-jumper note (learned 2026-10-01): the Nucleo power-source jumper must be on **5V_STLK** for
   USB power. On **E5V** the MCU is unpowered, while the ST-LINK still enumerates, which gives
   "No STM32 target found". Worth putting in the students' troubleshooting notes.
@@ -78,8 +94,29 @@ Course-specific technical conclusions belong here or in a document in this folde
 | 3 | Wheels: PI speed control @100 Hz, Mecanum kinematics, odometry, trajectories | 7–10 | 26% |
 | 4 | Cart + MATLAB: UART protocol, App Designer GUI, sonar polar map, Simulink → C | 10–13 | 28% |
 
-That's 91% total, plus up to 3% creativity bonus per lab. Dates go on Moodle. 🔴 The remaining 9%
-isn't stated anywhere. It may be the quiz; ask Yohai or Bucher.
+That's 91% total, plus up to 3% creativity bonus per lab (the 9% was originally meant as the
+creativity bonus). Dates go on Moodle.
+
+**Agreed with Bucher (2026-10-08):** **3 assignments + 2 quizzes**, replacing the 4 labs above.
+A1 "No wheels" (NUCLEO + IO board: types, wrap-around, bit ops, logic, blinking, RGB). A2 "Wheels in
+the air" (motors on the block). A3 "Wheels on the ground". **Weights: Quiz 1 10%, Quiz 2 10%,
+A1 20%, A2 25%, A3 35%.** Each quiz takes the **first hour of a lecture**: Quiz 1 in lecture 4
+(23.11.2026), Quiz 2 in lecture 8 (21.12.2026). Yohai will probably write the quizzes.
+
+**Work order and roles (agreed 2026-10-08):** the current main focus is **writing Assignment 1**.
+Bucher derives the first lectures' content from it. After that: A2 and A3; Bucher writes the
+lectures, Yohai the tutorials and (probably) the quizzes.
+
+The working plan is `MP2026_plan.tex`
+(13 sessions, lecture n ↔ tutorial n). **It is the reference for which tutorial matches which lesson.** Lectures are on
+**Mondays, from 2.11.2026**: 12 lecture+tutorial sessions → 18.1.2027, plus session 13 (25.1.2027),
+a lab meeting for open questions. Checked against the Technion calendar. A3 is out 11.1.2027 and due
+**3.3.2027**.
+
+**Assignment emphasis (Yohai, 2026-10-02):** start from the 2025 cart assignments, but shift the
+focus to **coding, hardware and timing issues**. Kinematics and trajectory work is "less
+interesting", so give it less weight. A2/A3 contents are to be discussed later; don't redesign them
+until asked.
 
 ### 4.3 Meeting plan (syllabus)
 
@@ -135,14 +172,41 @@ cads/                         Creo CAD of the cart/IO board (+ MG996R servo data
 new_pcb_demo.zip, test_pcb2a.zip
 ```
 
-🔴 Not yet read (they were locked when I surveyed on 2026-10-02): `Lesson_1/tutorial_first_stm32_app`,
-`Lesson_1/stack_buses_decoding_flipflops_counters`, `Lesson_2/lesson02_python_to_C_STM32`.
+### 4.6a Last year's course folder (2025/26), also READ-ONLY
+
+`C:\Users\yohai\OneDrive - Technion\Bucher Izhak's files - Shared_2025\` is the same rule as the
+2026 folder: never write there. What's worth reusing:
+- `assignments/Lab_1/`: the 2025 Lab 1 (F446 lab system: stepper, encoder in timer mode, port-D
+  LEDs) and `Lab0_background_p1` (non-submitted prep). `assignments/Lab_2/part1` (100 Hz timer ISR,
+  states IDLE/PWM/SQUARE/DRIVE, UART interpreter + MATLAB GUI) and `part2` (wheel model fit, PI
+  design, kinematics, figure-8 trajectory, obstacle stop). These are the natural base for our
+  A2/A3. `הנחיות להגשת דוח מעבדה.pdf` holds the report guidelines.
+- `tutorials/2025/`: TA1 (intro/lab rules, by TA Rami Sabbagh), TA6 (MATLAB GUI + PWM/UART-interrupt
+  project), TA7/TA8 (control workflow: fit → sisotool → c2d → C), TA9/TA10 (G474 projects with
+  MATLAB), TA11 (control, plus a Wiggler Simulink tutorial that is retired with the Wiggler).
+  `tutorials/Tutorial_1/number_representations_bit_operations.pptx` is a fit for A1.
+- `lessons/`: only lesson 1 (intro, bits/numbers) and PI-control/DC-motor decks. Root: Mecanum
+  trajectory/Frenet MATLAB scripts, Li-ion battery safety instructions (Hebrew).
+- Student submissions (`הגשת מעבדה …`): don't read them unless they're needed for grading
+  calibration.
 
 ### 4.6 This folder
 
 ```
 MP.md                          this file
 CLAUDE.md                      auto-loaded pointer to this file
+MP2026_plan.tex                12-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 detailed)
+                               (only the .tex goes in git, not the PDF)
+ass1/                          files handed to A1 students: io_board.h, io_board.c (copied
+                               unmodified from Bucher's Lesson 3 package). The ultrasonic sensor is
+                               not part of A1 (Yohai, 2026-10-11); A1 uses only the IR sensor
+tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section per tutorial (may be
+                               split into 12 PDFs for students later). Built from a pptxgenjs
+                               script (scratchpad). Content so far: tutorial 1 (USER CODE
+                               sections), tutorial 4 (fast vs slow outputs, blocking, the
+                               logic/store/transport layers, the super loop). Once Yohai edits
+                               it in PowerPoint, never regenerate it: add slides in place
+
 general/rolling doc MP course.docx   Yohai's running list of understanding questions
 hardwaret_test/                CubeIDE project (G474RE; align_servo.ioc; HardwareTest + servo builds)
                                + mailFromBucher_100826.txt (servo pulse explanation)
@@ -161,6 +225,27 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
 - **Assignment work keeps three things apart:** the assignment sheet (student-facing), the
   reference solution (TA-only), and the grading rubric. The solution never goes anywhere a student
   could see it.
+- **Never write a double hyphen (`--`)**, in any document, LaTeX included (Yohai's standing rule,
+  2026-10-02). For ranges write "1 to 3" or a single hyphen, and use a colon or comma instead of a
+  dash. The only exception is markdown table syntax (`|---|`), which the format requires.
+- **`MP2026_plan.tex` is clean content.** No notes to self, rationale or source references; those
+  go in §6 and §7 of this file. **The one exception: red `\flag{...}` notes for Bucher and Yohai**
+  (Yohai, 2026-10-11), placed where an assignment item needs a joint decision, e.g. a provided
+  function that already solves the item. They are deleted before anything is published to
+  students. **Blue text** marks content Yohai considers less important (a candidate to shrink),
+  e.g. the IO-board part of lecture 3, which may give way to timers and `HAL_GetTick`. Instructions never tell students "don't use function X"; flag it instead.
+- **Every function students need but haven't learned yet is provided, and the instructions say so**
+  (Yohai, 2026-10-11). Short code goes as text in the assignment's appendix, for copy-paste (e.g.
+  the `__io_putchar` printf redirect in Appendix A1). Long code goes as files in that assignment's
+  folder (`STM32/ass1/`, `ass2/`, …), and the instructions name the files and where to copy them.
+- **Compile-check after every code edit** (verified working 2026-10-10 on `hardwaret_test`: 28
+  files, 0 warnings, 2 s). CubeIDE 2.2.0 is at `C:\ST\STM32CubeIDE_2.2.0`. Put on PATH its
+  `plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.win32_*\tools\bin`
+  and `plugins\com.st.stm32cube.ide.mcu.externaltools.make.win32_*\tools\bin`, then run
+  `make -j8 all` inside the project's `Debug\` folder. It uses CubeIDE's own generated makefile,
+  so it builds what the IDE builds. Limit: that makefile lists the source files, so a **new** `.c`
+  file is only picked up after CubeIDE regenerates it (Yohai builds once in the IDE). Building is
+  fine; **flashing the board is not**, unless Yohai explicitly asks.
 - **Deliverables for Bucher** are prepared here; Yohai moves them to the shared folder himself.
 - Planned documents (create when the task starts, not before): `assignments/` (unified assignment
   document + solutions + rubrics), `tutorials/`, `quiz/`, and a `PROGRESS.md` once there is ongoing
@@ -168,6 +253,49 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
 
 ## 6. Open questions for Yohai
 
-1. What is the remaining 9% of the grade (the quiz?).
-2. Is 12 or 13 meetings correct for the actual timetable, and which lesson file maps to which week?
-3. Servo pulse range: 1000–2000 µs (syllabus) or 1500 ± 900 µs (Bucher's servo program)?
+1. **Cart hardware, to check on the cart/PCB** (from the hardware-test project; kept out of the
+   student-facing configuration sections until confirmed):
+   - Which physical wheel is motor 1 to 4 (FL/FR/RL/RR), and each encoder's count direction.
+   - Motor-driver enable (M_EN): `main.h` assumes PC3, but the code never drives it and the wheels
+     turn anyway. Is there an enable pin at all?
+   - **Servo channel on the PCA9685:** the test drives CH0 to CH3 together with the same pulse, so
+     it works whichever channel the servo is on. Most likely only one channel is wired (the
+     ultrasonic gimbal) and the other three are free headers, but the code can't tell which. The
+     A2 configuration section deliberately doesn't name a channel. Check the board before A2 is published.
+   - Configured in the test `.ioc` but unused, and purpose unknown: ADC1_IN12 (PB1), ADC5_IN1 (PA8),
+     TIM15 (50 Hz base, interrupt enabled), TIM20_CH3 PWM (PC8). Possibly leftovers (battery
+     sense? old direct servo timer?). Left out of the student docs.
+   - Free GPIO outputs in the test `.ioc`: PC3, PC4, PB5, PB6, PB7, PB14.
+   - Encoder mode: TI1 (×2 counting) in the test; TI12 would give ×4. Also the counts per wheel
+     revolution (to measure).
+   - Is the PCA9538A button chip fitted on this year's IO board? The test code never reads it.
+   - `main.h` has a stale comment with TRIG/ECHO swapped (ECHO = PB2, TRIG = PC12). The `.ioc` and
+     `main.c` (TRIG = PB2 TIM5_CH1 PWM, ECHO = PC12 TIM5_CH2 IC) are correct.
+   - A2 will need a periodic control interrupt (e.g. 100 Hz). The test project has none, so the A2
+     configuration section will need a timer added once A2 is written.
+2. **Do A1 students get Bucher's `io_board.h`/`.c`** (Lesson 3 package, `lessons/Lesson_3/
+   lesson3_cubeide_sources/`)? His syllabus and Lesson 3 slides say so ("provided LED helper
+   library", "black-box principle"), and A1 as written depends on it for the RGB LEDs and buttons,
+   but Yohai and Bucher haven't agreed it. If it is given as is, B.4 must forbid
+   `readButtonsPressed()` (it already does the invert + mask). Options: as is, a trimmed copy, or
+   none (then A1 needs rethinking).
+3. A2 is due 28.12.2026 (session 9) but A3 only goes out on 11.1.2027, a two-week gap. Intended?
+4. Where does the servo-scanned sonar go: A2, A3 or a bonus?
+
+## 7. Plan rationale and notes (kept out of MP2026_plan.tex)
+
+- **Sources per session:** session 1 = Bucher's Lesson 1 + his first-app tutorial deck (Lesson 0 as
+  self-study background). Session 2 = Lesson 2. Session 3 = Lesson 3. Session 8 tutorial = 2025
+  TA7/TA8. Session 9 tutorial = 2025 TA6. Session 11 tutorial = 2025 TA10/TA11. Sessions 4 onwards
+  follow the syllabus order, otherwise.
+- **I2C before PWM (session 5):** A1 uses the IO board as a black box, so opening it right after A1
+  motivates writing the drivers.
+- **Quizzes:** Quiz 1 (lecture 4) covers sessions 1 to 3, Quiz 2 (lecture 8) covers sessions 4 to 7.
+  That coverage split is my reading of the plan and appears in the plan's grading table; Bucher and
+  Yohai agreed only on the dates and weights.
+- **Submission format (2025, assumed kept):** one zip per assignment with the CubeIDE project,
+  `main.c`, a short demo video and a short typed report (no pasted code). Up to 3% creativity bonus
+  per assignment.
+- **A1 draft details removed from the plan:** deliverables = project zip, video of Parts D to F, and
+  a report with the predict-then-run table (A), truth table (C), timing answers (D) and one paragraph
+  per part. Suggested internal weighting: A 15, B 20, C 15, D 15, E 20, F 15.
