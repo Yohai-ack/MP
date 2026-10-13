@@ -200,6 +200,11 @@ MP2026_plan.tex                12-session plan (lecture ↔ tutorial, dates) + a
 ass1/                          files handed to A1 students: io_board.h, io_board.c (copied
                                unmodified from Bucher's Lesson 3 package). The ultrasonic sensor is
                                not part of A1 (Yohai, 2026-10-11); A1 uses only the IR sensor
+ass1/solution/                 TA-ONLY, never handed to students. checkBounce/ = CubeIDE project
+                               (from hardwaret_test) that measures bounce on the I2C buttons,
+                               B1 (EXTI + polled) and the IR sensor; driven via Live Expressions.
+                               Yohai runs it and returns checkBounce_instructions.txt filled in;
+                               then the Part C setup is decided
 tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section per tutorial (may be
                                split into 12 PDFs for students later). Built from a pptxgenjs
                                script (scratchpad). Content so far: tutorial 1 (USER CODE
