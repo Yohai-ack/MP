@@ -62,11 +62,26 @@ Course-specific technical conclusions belong here or in a document in this folde
 
 ### 4.1 Platform — one cart, one MCU
 
+- **A1's `.ioc` is provided, not built by students** (agreed with Bucher, 2026-10-15): `ass1/ass1.ioc`,
+  generated from the hardware-test `.ioc` with only A1's items (GPIO LD2/B1/IR_SENSOR, LPUART1,
+  I2C1, EXTI15_10). Checked 2026-10-15: CubeMX 6.18 headless generates it, and it builds with
+  `io_board.c`, 0 warnings. Tutorial 5 (first tutorial after A1 is due) teaches creating a `.ioc`.
+  For A2, students duplicate `ass1.ioc` (CubeMX *Save Project As* → `ass2/ass2.ioc`) and add only
+  the new items.
 - **Pin/peripheral configuration for students: a "project configuration (.ioc)" section at the end
   of each assignment** in `MP2026_plan.tex` (Yohai, 2026-10-11; replaced the separate
-  `ass_*_ioc.tex` files, now deleted). Each lists only what that assignment needs, so students
+  `ass_*_ioc.tex` files, now deleted). For A1 it's a reference list of what `ass1.ioc` contains.
+  Each lists only what that assignment needs, so students
   aren't confused, and they're **cumulative**: A2's contains everything in A1's, even where A2
-  doesn't use it. A3 may share A2's or get its own. Unconfirmed hardware stays out of them; the
+  doesn't use it.
+- **CubeIDE 2.x has no built-in CubeMX.** Double-clicking a `.ioc` opens the separate STM32CubeMX
+  (installed at `%LOCALAPPDATA%\Programs\STM32CubeMX`). Projects come into CubeIDE through
+  *File → Import → STM32CubeMX/STM32CubeIDE Project*. Students need both programs. To check a
+  `.ioc` headlessly: `jre\bin\java.exe -jar STM32CubeMX.exe -q script.txt` (the `.exe` alone
+  opens the GUI), with `config load`, `project toolchain Makefile`, `project path`,
+  `project generate`, `exit`; then `make` with CubeIDE's toolchain.
+- **The system clock is PLL from HSI (16 MHz / 4 × 85 / 2 = 170 MHz)**, not HSE, in the working
+  hardware-test project (`RCC_PLLSOURCE_HSI`). The HSE/LSE pins are only board defaults. A3 may share A2's or get its own. Unconfirmed hardware stays out of them; the
   open items live in §6 below. All values come from the working hardware-test project
   (`hardwaret_test/align_servo.ioc` + `main.c`).
 - **USART3 (PC10 TX / PC11 RX, 115200)** is the **wireless module** (used in 2025). It may be used
@@ -203,7 +218,8 @@ MP.md                          this file
 CLAUDE.md                      auto-loaded pointer to this file
 MP2026_plan.tex                12-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 detailed)
                                (only the .tex goes in git, not the PDF)
-ass1/                          files handed to A1 students: io_board.h, io_board.c (copied
+ass1/                          files handed to A1 students: ass1.ioc (the project configuration),
+                               io_board.h, io_board.c (copied
                                unmodified from Bucher's Lesson 3 package). The ultrasonic sensor is
                                not part of A1 (Yohai, 2026-10-11); A1 uses only the IR sensor
 ass1/solution/                 TA-ONLY, never handed to students. checkBounce/ = CubeIDE project
@@ -223,7 +239,10 @@ tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section pe
                                split into 12 PDFs for students later). Built from a pptxgenjs
                                script (scratchpad). Content so far: tutorial 1 (USER CODE
                                sections), tutorial 4 (fast vs slow outputs, blocking, the
-                               logic/store/transport layers, the super loop). Once Yohai edits
+                               logic/store/transport layers, the super loop), tutorial 5
+                               (creating a .ioc in CubeMX: flow, rebuilding ass1.ioc in two
+                               tables, duplicating it for A2; slides 19 to 22, added in place
+                               2026-10-15 by duplicating slides 9 and 16). Once Yohai edits
                                it in PowerPoint, never regenerate it: add slides in place
 
 general/rolling doc MP course.docx   Yohai's running list of understanding questions

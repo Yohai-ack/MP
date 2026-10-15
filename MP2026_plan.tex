@@ -27,7 +27,7 @@
 \endfoot
 1 & 2.11.2026 & Intro and product mindset; logic gates, flip-flops, counters, edge vs.\ level; integers in binary/hex, two's
     complement, overflow.
-  & First STM32 application: CubeMX $\to$ build $\to$ flash, blink LD2, \texttt{printf} to PuTTY, breakpoints and
+  & First STM32 application: project from a provided \texttt{.ioc} $\to$ build $\to$ flash, blink LD2, \texttt{printf} to PuTTY, breakpoints and
     live expressions.
   & \\
 \addlinespace
@@ -55,6 +55,8 @@
 5 & 30.11.2026 & The I2C bus opened: protocol, addressing, ACK/NACK, pull-ups; HAL I2C; register-level drivers for PCA9634,
     PCA9538A, PCA9685 (servo pulses).
   & I2C bus scan: detect the five IO-board chips (3$\times$ PCA9634 RGB LED drivers, PCA9538A buttons, PCA9685 servo driver); rewrite \texttt{set\_rgb} on raw \texttt{HAL\_I2C\_Mem\_Write}; servo sweep.
+    Short part: creating a \texttt{.ioc} in STM32CubeMX (board selection, pins and labels, peripherals, clock, NVIC),
+    shown by rebuilding \texttt{ass1.ioc}; then duplicating it as the start of \texttt{ass2.ioc}.
   & A1 due \\
 \addlinespace
 6 & 7.12.2026 & PWM and input capture: duty cycle, H-bridge preview; SR04 trigger/echo by input capture; EXTI on the
@@ -137,8 +139,9 @@ Assignment 3 & Driving on the ground, ultrasonic sensing, MATLAB GUI, Simulink t
 the provided IO-board functions. The I2C internals stay a black box until session~5.
 
 \medskip\noindent
-\textbf{Provided code.} The RGB LEDs and the buttons sit on the I2C bus, which is taught only in session~5. Until then,
-use the provided files \texttt{io\_board.h} and \texttt{io\_board.c}: copy \texttt{io\_board.h} into \texttt{Core/Inc}
+\textbf{Provided files.} The project configuration is provided as \texttt{ass1.ioc}: you do not build it yourself (see
+``Assignment 1: project configuration'' below; creating a \texttt{.ioc} is taught in tutorial~5). The RGB LEDs and the
+buttons sit on the I2C bus, which is taught only in session~5. Until then, use the provided files \texttt{io\_board.h} and \texttt{io\_board.c}: copy \texttt{io\_board.h} into \texttt{Core/Inc}
 and \texttt{io\_board.c} into \texttt{Core/Src} (in CubeIDE, refresh the project with F5 afterwards). In
 \texttt{main.c}, add \texttt{\#include "io\_board.h"} inside \texttt{USER CODE BEGIN Includes} (include the
 \texttt{.h} file only, never the \texttt{.c} file), and call \texttt{ioBoardInit()} once inside
@@ -243,16 +246,21 @@ Set the brightness of all LEDs with \texttt{setRGB(v, v, v)} from \texttt{io\_bo
 with \texttt{HAL\_GetTick}, so the inputs are read on every pass of the loop. In your report, give the truth table of
 the trigger condition, and draw the behaviour as a state diagram. Creativity bonus applies here.
 
-\subsubsection*{Assignment 1: project configuration (\texttt{.ioc})}
-Everything needed to build the STM32CubeMX configuration for Assignment~1. The wheels are not used.
+\subsubsection*{Assignment 1: project configuration (provided: \texttt{ass1.ioc})}
+The STM32CubeMX configuration for Assignment~1 is provided as \texttt{ass1.ioc}. The tables below list what it contains,
+for reference. The wheels are not used.
 
-\paragraph{Creating the project.}
+\paragraph{Creating the project.} You need STM32CubeIDE and STM32CubeMX.
 \begin{enumerate}
-  \item STM32CubeIDE: \emph{File $\to$ New $\to$ STM32 Project}, tab \emph{Board Selector}, choose \textbf{NUCLEO-G474RE}.
-  \item Answer \textbf{Yes} to ``Initialize all peripherals with their default mode''. This already configures LD2,
-        the B1 button, LPUART1 and the debug pins.
-  \item Apply the settings below, then \emph{Project $\to$ Generate Code}.
+  \item Create a folder named \texttt{ass1} (for example inside your STM32CubeIDE workspace) and copy \texttt{ass1.ioc}
+        into it.
+  \item Open \texttt{ass1.ioc} in STM32CubeMX and click \emph{GENERATE CODE}. The toolchain (STM32CubeIDE) is already
+        selected. The project is generated into the \texttt{ass1} folder.
+  \item In STM32CubeIDE: \emph{File $\to$ Import $\to$ STM32CubeMX/STM32CubeIDE Project}, and select the \texttt{ass1}
+        folder. Build the project once before adding your code.
 \end{enumerate}
+\flag{Yohai, delete before publishing: check these steps and the menu names on a clean PC with STM32CubeIDE 2.2 and
+STM32CubeMX 6.18 (in CubeIDE 2.x, CubeMX is a separate program).}
 
 \paragraph{System.}\leavevmode\\[2pt]
 \begin{tabularx}{\textwidth}{@{}l L@{}}
@@ -260,7 +268,7 @@ Everything needed to build the STM32CubeMX configuration for Assignment~1. The w
 Item & Setting \\
 \midrule
 MCU & STM32G474RET6 (Cortex-M4F with FPU) \\
-System clock & SYSCLK = 170\,MHz from the PLL (HSE source). HCLK = APB1 = APB2 = 170\,MHz \\
+System clock & SYSCLK = 170\,MHz from the PLL (HSI 16\,MHz source). HCLK = APB1 = APB2 = 170\,MHz \\
 Debug & Serial Wire: PA13 (SWDIO), PA14 (SWCLK), PB3 (SWO). \textbf{Never reassign these pins.} \\
 Time base & SysTick, 1\,ms (used by \texttt{HAL\_Delay} and \texttt{HAL\_GetTick}) \\
 Board power & Power jumper on \textbf{5V\_STLK} (USB power) \\
@@ -328,7 +336,14 @@ To be defined.
 
 \subsubsection*{Assignment 2: project configuration (\texttt{.ioc})}
 The complete Assignment~1 configuration, plus the wheels (motors and encoders), the ultrasonic sensor and the servo
-that turns it. Create the project as in Assignment~1. All timer clocks are 170\,MHz.
+that turns it. Do not start from scratch: duplicate \texttt{ass1.ioc} and add only the new items below.
+\begin{enumerate}
+  \item Open \texttt{ass1.ioc} in STM32CubeMX and save a copy with \emph{File $\to$ Save Project As} into a new folder
+        named \texttt{ass2}. This gives \texttt{ass2.ioc}; \texttt{ass1.ioc} stays unchanged.
+  \item In \texttt{ass2.ioc}, add the pins and peripherals listed below. Leave the Assignment~1 settings as they are.
+  \item Click \emph{GENERATE CODE}, then import the \texttt{ass2} folder into STM32CubeIDE as in Assignment~1.
+\end{enumerate}
+All timer clocks are 170\,MHz.
 
 \paragraph{Pins from Assignment 1.} PA5 (LD2), PC13 (B1), PA2/PA3 (LPUART1), PB8/PB9 (I2C1), PA7 (IR\_SENSOR), with
 the same settings as in Assignment~1.
