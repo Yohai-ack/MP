@@ -17,6 +17,10 @@ For every input it counts the edges, and it times the gap between consecutive
 edges. A person cannot press twice within a few tens of milliseconds, so any
 gap shorter than 30 ms (a "short gap") is bounce.
 
+B1 is the BLUE push button on the Nucleo board itself (labelled "B1 USER").
+Do NOT press the BLACK button ("B2 RESET"): it restarts the program and sets
+every count back to zero.
+
 Nothing moves: the program never drives the wheels, the LEDs or the servo.
 You do everything through Live Expressions. PuTTY is not needed.
 
