@@ -22,9 +22,15 @@ the course is settled, update this file in the same session.
 
 | Folder | What it is | My permission |
 |---|---|---|
-| `C:\Users\yohai\git_codes\STM32\` (this folder, and all subfolders) | Yohai's **private** working folder. Bucher has **no** access. Git repo → `https://github.com/Yohai-ack/MP.git` | **Read and write**, but only on Yohai's request or as these rules say |
+| `STM32\` (this folder, and all subfolders): `C:\Users\yohai\git_codes\STM32\` or `D:\git_codes\STM32\`, depending on the PC (see below) | Yohai's **private** working folder. Bucher has **no** access. Git repo → `https://github.com/Yohai-ack/MP.git` | **Read and write**, but only on Yohai's request or as these rules say |
 | `C:\Users\yohai\OneDrive - Technion\Izhak Bucher's files - shared_2026\` | Bucher's shared folder. Yohai has write access, and puts files there when he wants Bucher to see them | **READ-ONLY, ALWAYS.** Never write, move, rename or delete anything there, even if asked in passing. If Yohai wants something placed there, I prepare it in `STM32\` and he copies it himself |
 
+- **Two PCs.** Yohai works on two PCs, and the repo is cloned on both: `C:\Users\yohai\git_codes\STM32\`
+  on one, `D:\git_codes\STM32\` on the other. He moves work between them with git push/pull, so
+  check `git status` and the latest commit at the start of a session. Paths written in files (e.g.
+  the checkBounce instruction sheets) should give both. The tools differ too: CubeIDE 2.2.0 and its
+  ARM toolchain are on the C: PC (§5). On the D: PC only a stub `C:\ST\STM32CubeIDE_1.5.1` was
+  found (no compiler, 2026-10-14), so there the best check is a host-GCC `-fsyntax-only`.
 - **Last year's folder** `C:\Users\yohai\OneDrive - Technion\Bucher Izhak's files - Shared_2025\`:
   **READ-ONLY, ALWAYS**, same rule as above (see §4.6a).
 - Read the shared folder freely to understand the course. Bucher will keep adding material
@@ -203,8 +209,16 @@ ass1/                          files handed to A1 students: io_board.h, io_board
 ass1/solution/                 TA-ONLY, never handed to students. checkBounce/ = CubeIDE project
                                (from hardwaret_test) that measures bounce on the I2C buttons,
                                B1 (EXTI + polled) and the IR sensor; driven via Live Expressions.
-                               Yohai runs it and returns checkBounce_instructions.txt filled in;
-                               then the Part C setup is decided
+                               Results in checkBounce_instructions_filled.txt (2026-10-13):
+                               B1 clean (RC filter on the Nucleo), I2C buttons bounce rarely
+                               (0 to 4 short gaps per 20 presses, always one 407 us sample at
+                               100 kHz), IR sensor chatters heavily near its switching distance.
+                               Decided: C.1(a) stays on button 0; (b) and (c) use button 0 and
+                               the IR sensor (not yet written into the plan).
+                               checkBounce2/ = follow-up: press recount (raw presses/releases +
+                               20 ms debounced count), IR polarity (LD2 mirrors PA7), I2C at
+                               100 or 400 kHz switched at run time, edge-timing log dumped to
+                               PuTTY. Yohai fills checkBounce2_instructions.txt
 tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section per tutorial (may be
                                split into 12 PDFs for students later). Built from a pptxgenjs
                                script (scratchpad). Content so far: tutorial 1 (USER CODE

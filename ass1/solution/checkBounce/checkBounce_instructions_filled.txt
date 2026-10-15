@@ -1,0 +1,193 @@
+CHECKBOUNCE: INSTRUCTIONS AND RESULTS SHEET
+===========================================
+
+Purpose
+~~~~~~~
+Find out which input on the cart shows contact bounce, so we can choose the
+setup for Assignment 1, Part C (counting button presses: level, edge, and
+debounced edge).
+
+The program watches four inputs at the same time, with NO debouncing:
+  1. The four I2C buttons on the IO board (read over I2C, as fast as possible)
+  2. The blue Nucleo button B1, through its interrupt (EXTI)
+  3. The blue Nucleo button B1, read in the main loop
+  4. The IR obstacle sensor at the front of the cart
+
+For every input it counts the edges, and it times the gap between consecutive
+edges. A person cannot press twice within a few tens of milliseconds, so any
+gap shorter than 30 ms (a "short gap") is bounce.
+
+Nothing moves: the program never drives the wheels, the LEDs or the servo.
+You do everything through Live Expressions. PuTTY is not needed.
+
+Where you fill something in, it looks like this:  [ ______ ]
+Write your value between the brackets.
+
+
+PART 1: SETUP (once)
+====================
+
+1. Hardware
+   - Cart with the IO board connected, as for the hardware test.
+   - USB cable from the Nucleo to the PC.
+   - Power jumper on the Nucleo: 5V_STLK.
+
+2. Open the project in STM32CubeIDE
+   - File > Import > General > Existing Projects into Workspace > Next.
+   - Select root directory:
+       C:\Users\yohai\git_codes\STM32\ass1\solution\checkBounce
+   - Make sure "checkBounce" is ticked, and "Copy projects into workspace"
+     is NOT ticked. Finish.
+   - Do NOT open checkBounce.ioc and do NOT press Generate Code. The project
+     is ready as it is.
+
+3. Build and start debugging
+   - Select the project, press the hammer (build). Expect 0 errors.
+   - Press the bug icon (F11). If asked, choose "STM32 C/C++ Application",
+     then OK. The debugger stops at the start of main().
+   - Press Resume (F8). The program now runs.
+
+4. Live Expressions
+   - Window > Show View > Live Expressions (if it is not open already).
+   - Click "Add new expression" and type each name below, exactly as written
+     (one per line). Arrays (marked [4]) show a small arrow; open it to see
+     elements [0] to [3].
+
+     INPUTS (you will write these):
+       resetCounts
+       shortGapUs
+
+     OUTPUTS (you will read these):
+       loopsPerSec
+       i2cOk
+       i2cHeld
+       i2cReadsPerSec
+       i2cPresses          [4]
+       i2cShortGaps        [4]
+       i2cMinGapUs         [4]
+       b1IrqRises
+       b1IrqShortGaps
+       b1IrqMinGapUs
+       b1Level
+       b1PollRises
+       b1PollShortGaps
+       b1PollMinGapUs
+       irLevel
+       irObstacles
+       irShortGaps
+       irMinGapUs
+
+   - To write an input: click its Value cell, type the new number, press
+     Enter.
+   - "resetCounts": write 1 to set every count back to zero. The program sets
+     it back to 0 by itself immediately.
+   - "shortGapUs" is 30000 (30 ms). Leave it, unless I ask you to change it.
+
+5. Meaning of the outputs
+   - ...Presses / ...Rises / ...Obstacles : number of edges counted.
+   - ...ShortGaps : number of edges that came less than 30 ms after the
+                    previous edge of the same input. 0 = no bounce seen.
+   - ...MinGapUs  : the shortest gap seen, in microseconds (1000 us = 1 ms).
+                    4294967295 means "no gap measured yet".
+   - i2cHeld      : bit n is 1 while I2C button n is held (1, 2, 4, 8).
+   - b1Level      : 1 or 0, the current level of the B1 pin.
+   - irLevel      : 1 = no obstacle, 0 = obstacle.
+
+
+PART 2: SANITY CHECK (before the tests)
+=======================================
+
+Write what you see:
+
+  LD2 (green LED on the Nucleo) blinks twice a second?   [ yes  ]
+  i2cOk (should be 1)                                     [ 1 ]
+  i2cReadsPerSec (expected about 2000)                    [2463 or 2463 ]
+  loopsPerSec                                             [ 2462 ]
+  Hold I2C button 0: i2cHeld becomes 1?                   [ yes  ]
+  Hold I2C button 3: i2cHeld becomes 8?                   [ yes  ]
+  b1Level while B1 is released                            [0 ]
+  b1Level while B1 is held                                [1 ]
+  irLevel with nothing in front of the sensor             [0 ]
+  irLevel with your hand close in front of it             [ 1 ]
+
+If i2cOk is 0, the IO board does not answer: check its cable, then write it
+in the notes at the end and continue with Tests B and C.
+
+
+PART 3: THE TESTS
+=================
+
+For every row: write 1 into resetCounts first, then do the action, then copy
+the values. Press at a normal, natural speed: one clear press and release,
+about one per second. Count your presses carefully.
+
+TEST A: I2C BUTTONS (20 presses each)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                                Presses   ShortGaps   MinGapUs
+  Button 0, round 1            [ __20__ ]  [ 4____ ]    [ __407______ ]
+  Button 0, round 2            [ ___20_ ]  [ 0____ ]    [ ___60520_____ ]
+  Button 0, round 3            [ ____20 ]  [0 ____ ]    [ 71892________ ]
+  Button 1                     [ ___20_ ]  [ ___2_ ]    [ __407______ ]
+  Button 2                     [ 20____ ]  [ _0___ ]    [ __86106______ ]
+  Button 3                     [ ___20_ ]  [ __0__ ]    [ _80830_______ ]
+  Button 0, 20 very light,
+    slow presses               [ __20__ ]  [ _2___ ]    [ ___407_____ ]
+  Button 0, 20 fast hard taps  [ __20__ ]  [ 2____ ]    [ __407______ ]
+
+  (Use element [0] for button 0, [1] for button 1, and so on.)
+
+TEST B: NUCLEO BUTTON B1 (20 presses per round)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Each round gives two sets of numbers: the interrupt (Irq) and the main-loop
+  polling (Poll). Copy both.
+
+             b1IrqRises  b1IrqShortGaps  b1IrqMinGapUs
+  Round 1    [ 20____ ]    [ _0___ ]        [ _423794_______ ]
+  Round 2    [ 20____ ]    [ __0__ ]        [ _485798_______ ]
+  Round 3    [ _20___ ]    [ _0___ ]        [ _557378_______ ]
+
+             b1PollRises b1PollShortGaps b1PollMinGapUs
+  Round 1    [ __20__ ]    [ __0__ ]        [ 424046________ ]
+  Round 2    [ ___20_ ]    [ __0__ ]        [ __485783______ ]
+  Round 3    [ __20__ ]    [ __0__ ]        [ ____557267____ ]
+
+TEST C: IR OBSTACLE SENSOR
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  C1. Bring your hand slowly toward the sensor until it detects (irLevel
+      goes to 0), then pull it away. Do this 10 times.
+
+             irObstacles  irShortGaps  irMinGapUs
+             [ ___301_ ]     [ 572____ ]     [ 407________ ]
+
+  C2. Hold your hand still at the distance where the sensor just switches,
+      for about 5 seconds.
+
+             irObstacles  irShortGaps  irMinGapUs
+             [ _15___ ]     [ __28__ ]     [ __407______ ]
+
+  At about what distance does the sensor switch?   [ _2.5_____ cm ]
+
+
+PART 4: NOTES
+=============
+
+Anything unexpected (a value that never changed, a button that did not
+respond, the cart doing something, and so on):
+
+[
+]
+
+
+HOW I WILL READ THE RESULTS (for your information)
+==================================================
+
+  - Presses equal to 20 and ShortGaps = 0  ->  no bounce visible on that input.
+  - Presses above 20 or ShortGaps above 0 ->  bounce, so that input can show
+    the difference between plain edge counting and debounced counting.
+  - MinGapUs of a few hundred to a few thousand us is typical bounce.
+  - If the interrupt (Irq) shows bounce but polling does not, the bounce is
+    shorter than one polling period.
+Send the filled file back, and we will choose the setup for Part C.

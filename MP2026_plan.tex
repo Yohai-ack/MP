@@ -144,6 +144,8 @@ and \texttt{io\_board.c} into \texttt{Core/Src} (in CubeIDE, refresh the project
 \texttt{.h} file only, never the \texttt{.c} file), and call \texttt{ioBoardInit()} once inside
 \texttt{USER CODE BEGIN 2}. CubeIDE compiles \texttt{io\_board.c} automatically. To make \texttt{printf} print to PuTTY, copy the function in
 Appendix~A1 into your \texttt{main.c}.
+\flag{For Bucher and Yohai, delete before publishing: if the \texttt{printf} redirect to PuTTY is taught in
+lecture~3, perhaps this appendix can be deleted.}
 
 \medskip\noindent
 \textbf{Learning outcome.} Students work confidently in C on real hardware. They choose variable types deliberately,
@@ -213,9 +215,8 @@ the pattern past bit 7 without losing it.
                 exactly 20 times, 3 times over.
         \end{enumerate}
         In your report, compare the three results and explain each difference.
-        \flag{For Bucher and Yohai, delete before publishing: (b) shows bouncing only if the IO-board buttons
-        bounce and no hardware filter hides it. Verify on the cart with state 17 of the hardware test before
-        publishing; if the I2C buttons show no bounce, use the Nucleo button B1 with an EXTI interrupt instead.}
+        \flag{For Bucher and Yohai, delete before publishing: another bounce check will be done with the I2C bus
+        at 400\,kHz instead of the current 100\,kHz.}
 \end{enumerate}
 
 \paragraph{Part D: LED blinking and timing.}

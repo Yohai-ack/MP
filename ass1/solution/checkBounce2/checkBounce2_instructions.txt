@@ -1,0 +1,280 @@
+CHECKBOUNCE2: INSTRUCTIONS AND RESULTS SHEET
+============================================
+
+Purpose
+~~~~~~~
+A second, more detailed bounce test, after the results of checkBounce.
+It answers three questions:
+
+  1. Press count. In checkBounce, every I2C row showed 20 presses together
+     with up to 4 short gaps. Every bounce adds an extra press edge
+     (press, release, press), so 20 presses with short gaps should be
+     impossible. This test counts presses and releases separately, keeps a
+     debounced count next to the raw one, and logs the time of every edge,
+     so we can see exactly what happened.
+  2. IR polarity. The course plan says PA7 is active-low (LOW = obstacle);
+     your sanity check showed the opposite. This test shows PA7 on LD2.
+  3. I2C speed. The buttons are read over I2C at 100 kHz, about 2500 reads
+     per second, so a bounce shorter than about 400 us is never seen. The
+     same tests are repeated at 400 kHz (about 4 times more reads).
+
+Two inputs are watched: I2C button 0, and the IR sensor on PA7.
+The B1 button is not tested again: checkBounce showed it is clean.
+
+Nothing moves: the program never drives the wheels, the LEDs or the servo.
+This time you need PuTTY as well as Live Expressions: the edge log is
+printed to PuTTY.
+
+Where you fill something in, it looks like this:  [ ______ ]
+Write your value between the brackets. Where a log is asked for, paste the
+PuTTY text between the lines marked "paste here".
+
+
+PART 1: SETUP (once)
+====================
+
+1. Hardware
+   - Cart with the IO board connected, as for checkBounce.
+   - USB cable from the Nucleo to the PC.
+   - Power jumper on the Nucleo: 5V_STLK.
+
+2. Open the project in STM32CubeIDE
+   - File > Import > General > Existing Projects into Workspace > Next.
+   - Select root directory, depending on the PC you work on:
+       D:\git_codes\STM32\ass1\solution\checkBounce2
+     or
+       C:\Users\yohai\git_codes\STM32\ass1\solution\checkBounce2
+   - Make sure "checkBounce2" is ticked, and "Copy projects into workspace"
+     is NOT ticked. Finish.
+   - Do NOT open checkBounce2.ioc and do NOT press Generate Code. The
+     project is ready as it is.
+
+3. PuTTY
+   - Connect to the ST-LINK COM port: 115200 baud, 8 data bits, no parity,
+     1 stop bit (Connection type: Serial).
+   - Before you start: Window > Lines of scrollback = 5000. A log of the IR
+     sensor can be 500 lines long.
+   - To copy the whole PuTTY text: right-click the PuTTY title bar >
+     "Copy All to Clipboard". Before each test, clear the window with
+     right-click title bar > "Clear Scrollback", so each copy holds one log.
+
+4. Build and start debugging
+   - Select the project, press the hammer (build). Expect 0 errors.
+     (This project was only syntax-checked, not built, before you got it.
+     If the build shows errors or warnings, copy them into Part 4.)
+   - Press the bug icon (F11). If asked, choose "STM32 C/C++ Application",
+     then OK. The debugger stops at the start of main().
+   - Press Resume (F8). PuTTY prints:
+       checkBounce2 running. I2C 100 kHz, log source 0. ...
+
+5. Live Expressions
+   - Window > Show View > Live Expressions.
+   - Add each name below, exactly as written:
+
+     INPUTS (you will write these):
+       resetCounts      write 1: all counts and the log go back to zero
+       i2cFast          0 = I2C at 100 kHz, 1 = I2C at 400 kHz
+       logSource        0 = log I2C button 0, 1 = log the IR sensor
+       dumpLog          write 1: the log is printed to PuTTY
+       shortGapUs       30000 (30 ms). Leave it.
+       debounceMs       20. Leave it.
+
+     OUTPUTS (you will read these):
+       loopsPerSec
+       i2cKHz
+       i2cOk
+       i2cErrors
+       i2cHeld
+       b0Presses
+       b0Releases
+       b0ShortGaps
+       b0MinGapUs
+       b0DebPresses
+       irPin
+       irFalls
+       irRises
+       irShortGaps
+       irMinGapUs
+       irDebFalls
+       irDebRises
+       logCount
+
+   - Changing i2cFast or logSource resets all counts by itself.
+   - resetCounts and dumpLog go back to 0 by themselves.
+   - While the log is printing (2 to 5 s), the inputs are not read. Do not
+     press anything until PuTTY shows "=== END OF LOG ===".
+
+6. Meaning of the outputs
+   - b0Presses / b0Releases : raw edges of button 0, no debouncing.
+   - b0DebPresses           : presses counted after a 20 ms debounce.
+   - irFalls / irRises      : raw edges of PA7 (1 -> 0 and 0 -> 1). They are
+                              named by pin level, not by "obstacle", because
+                              the polarity is one of the questions.
+   - irDebFalls / irDebRises: the same after a 20 ms debounce.
+   - ...ShortGaps           : raw edges less than 30 ms after the previous
+                              raw edge of the same input.
+   - ...MinGapUs            : the shortest gap, in us. 4294967295 = none yet.
+   - In the PuTTY log, every line is one raw edge: its number, its time in
+     ms since the reset, the gap from the previous edge in us, and the new
+     level. "<short" marks a gap under 30 ms.
+
+
+PART 2: SANITY CHECK AND IR POLARITY
+====================================
+
+  i2cOk (should be 1)                                   [ ______ ]
+  i2cKHz (should be 100)                                [ ______ ]
+  loopsPerSec at 100 kHz                                [ ______ ]
+  Hold button 0: i2cHeld becomes 1?                     [ ______ ]
+
+IR polarity. LD2 (green LED on the Nucleo) now shows PA7: LD2 on = PA7 high.
+Many IR modules also have their own small LED that lights on detection;
+look at the sensor board for one.
+
+  Point the cart's front at open space: nothing within
+  50 cm in front of the sensor (not a wall, not the table
+  surface, not your body).
+      irPin                                             [ ______ ]
+      LD2 on or off                                     [ ______ ]
+      the sensor's own LED (on / off / has none)        [ ______ ]
+
+  Hold your hand 1 cm in front of the sensor.
+      irPin                                             [ ______ ]
+      LD2 on or off                                     [ ______ ]
+      the sensor's own LED                              [ ______ ]
+
+  Hold a sheet of white paper 1 cm in front of it.
+      irPin                                             [ ______ ]
+      LD2 on or off                                     [ ______ ]
+
+  Where exactly was the sensor pointing in checkBounce, when you wrote
+  "nothing in front"?                                   [ ______________ ]
+
+
+PART 3: THE TESTS
+=================
+
+How to press, in every button round:
+  - Count your presses out loud, 1 to 20, and do NOT look at the screen
+    while pressing. Stop at 20 even if you think you lost count; if you
+    are sure you lost count, write it in the notes and repeat the round.
+  - Natural speed: one clear press and release, about one per second.
+
+Before every round: write 1 into resetCounts and clear the PuTTY window.
+After every round: copy the values, write 1 into dumpLog, wait for
+"=== END OF LOG ===", copy all of PuTTY into the space given.
+
+
+TEST A: BUTTON 0 AT 100 kHz   (i2cFast = 0, logSource = 0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+          Presses  Releases  ShortGaps  MinGapUs      DebPresses  i2cErrors
+  Round 1 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+  Round 2 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+  Round 3 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+
+  Round 1 log: >>> paste here >>>
+
+
+  <<< end of round 1 log <<<
+
+  Round 2 log: >>> paste here >>>
+
+
+  <<< end of round 2 log <<<
+
+  Round 3 log: >>> paste here >>>
+
+
+  <<< end of round 3 log <<<
+
+
+TEST B: BUTTON 0 AT 400 kHz   (i2cFast = 1, logSource = 0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  First write 1 into i2cFast, wait 2 seconds, and check the bus:
+
+  i2cKHz (should be 400)                                [ ______ ]
+  i2cOk (should be 1)                                   [ ______ ]
+  i2cErrors after 10 s of doing nothing (should be 0)   [ ______ ]
+  loopsPerSec at 400 kHz (expected about 4 times
+    the 100 kHz value)                                  [ ______ ]
+  Hold button 0: i2cHeld becomes 1?                     [ ______ ]
+
+  If i2cOk is 0 or i2cErrors keeps growing, the bus does not work at
+  400 kHz. Write it in the notes, set i2cFast back to 0, skip the rest of
+  Test B, and do Test C at 100 kHz.
+
+          Presses  Releases  ShortGaps  MinGapUs      DebPresses  i2cErrors
+  Round 1 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+  Round 2 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+  Round 3 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+
+  Round 1 log: >>> paste here >>>
+
+
+  <<< end of round 1 log <<<
+
+  Round 2 log: >>> paste here >>>
+
+
+  <<< end of round 2 log <<<
+
+  Round 3 log: >>> paste here >>>
+
+
+  <<< end of round 3 log <<<
+
+
+TEST C: IR SENSOR   (i2cFast = 1, logSource = 1)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Point the cart at open space, as in Part 2.
+
+  C1. Bring your hand slowly toward the sensor until LD2 changes, then pull
+      it away. Do this 10 times, counting out loud.
+
+          Falls     Rises     ShortGaps  MinGapUs     DebFalls  DebRises
+          [ ____ ]  [ ____ ]  [ ____ ]   [ ________ ] [ ____ ]  [ ____ ]
+
+      logCount (if 512, the log is full: that is fine)  [ ______ ]
+
+      Log: >>> paste here >>>
+
+
+      <<< end of log <<<
+
+  C2. Pass your hand quickly in front of the sensor, at 1 cm, 10 times
+      (a clear in-and-out, no hovering at the switching distance).
+
+          Falls     Rises     ShortGaps  MinGapUs     DebFalls  DebRises
+          [ ____ ]  [ ____ ]  [ ____ ]   [ ________ ] [ ____ ]  [ ____ ]
+
+      (no log needed)
+
+
+PART 4: NOTES
+=============
+
+Build errors or warnings, anything unexpected, a round you repeated:
+
+[
+]
+
+
+HOW I WILL READ THE RESULTS (for your information)
+==================================================
+
+  - Presses must equal Releases (or one more, if you were still holding at
+    the end). A bounce always adds one press AND one release.
+  - DebPresses = 20 confirms your count of 20; Presses - DebPresses is then
+    the number of extra presses caused by bounce.
+  - In the log, a "<short" line right after a PRESS is press bounce; right
+    after a release is release bounce. The gaps show how long a bounce is.
+  - Test B against Test A: more short gaps at 400 kHz means the 100 kHz bus
+    was missing bounces that are shorter than one read.
+  - Test C, C1 against C2: chatter while approaching slowly, but not on a
+    quick pass, means the sensor flickers only at its switching distance
+    (no hysteresis). DebFalls and DebRises near 10 means the 20 ms debounce
+    is enough for Part C and Part E.
+Send the filled file back.
