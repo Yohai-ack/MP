@@ -247,7 +247,7 @@ tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section pe
 
 general/rolling doc MP course.docx   Yohai's running list of understanding questions
 hardwaret_test/                CubeIDE project (G474RE; align_servo.ioc; HardwareTest + servo builds)
-                               + mailFromBucher_100826.txt (servo pulse explanation)
+                               + HowToUse.txt (how to run the test: states, debugger, PuTTY)
 debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugging
 ```
 

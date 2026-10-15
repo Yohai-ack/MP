@@ -1,0 +1,162 @@
+HARDWARE TEST PROJECT: HOW TO USE
+NUCLEO-G474RE in the Mecanum cart (IO board, servo + HC-SR04, 4 wheels, IR sensor)
+==================================================================================
+
+What it does
+============
+One program tests every part of the cart. You choose the test by writing a
+number into the global variable 'state' from the debugger (Live Expressions).
+Nothing moves until you change 'state'. After reset, state = 0 (idle).
+
+
+1. BEFORE YOU START
+===================
+- Put the cart ON A BLOCK, wheels in the air. States 5 to 12 and 16 spin the
+  wheels.
+- Nucleo power jumper on 5V_STLK when powered from USB. (On E5V the MCU is
+  unpowered and the debugger reports "No STM32 target found".)
+- Turn the cart's battery/motor power on for the wheel tests (5 to 12, 16) and
+  for the servo (1 to 3).
+- Keep the front IR sensor clear. Any NEW obstacle in front of it sets
+  state = 0 by itself (see section 5).
+
+
+2. START A DEBUG SESSION
+========================
+1. Open the project in STM32CubeIDE and build it (hammer icon).
+2. Start the debug configuration "HardwareTest Debug" (it loads
+   Debug/HardwareTest.elf).
+3. The debugger stops at main(). Press Resume (F8).
+4. Optional but useful: open PuTTY on the ST-LINK virtual COM port (see the
+   COM number in Windows Device Manager), 115200 baud, 8N1. At start-up the
+   program prints the state table and checks the I2C chips:
+       I2C 0x01 : FOUND     (PCA9634, red LEDs)
+       I2C 0x02 : FOUND     (PCA9634, green LEDs)
+       I2C 0x07 : FOUND     (PCA9634, blue LEDs)
+       I2C 0x44 : FOUND     (PCA9685, servo)
+       I2C 0x71 : FOUND     (PCA9538A, buttons)
+   A "NOT FOUND" line means that chip does not answer: check the IO board
+   cable before going on. After this, a status line is printed every 0.5 s.
+5. Right after start-up LED 0 flashes red, green, blue once. This proves the
+   three LED driver chips answer.
+6. The green LED LD2 on the Nucleo toggles every 0.5 s: the program is alive.
+
+
+3. LIVE EXPRESSIONS TO ADD
+==========================
+Window > Show View > Live Expressions (while debugging). Click
+"Add new expression" and type each name:
+
+  Name                 You...   Meaning
+  ==================   ======   =============================================
+  state                WRITE    which test runs (table in section 4)
+  motorPwm             WRITE    wheel speed, 0 to 255 (default 97, about 38%)
+  wCounter             watch    +1 every main-loop pass. If it stops growing,
+                                the program is stuck
+  distanceUS           watch    ultrasonic distance in mm (state 4 only),
+                                0 = no echo
+  irLevel              watch    raw IR pin PA7: 1 = high, 0 = low
+  irObstacle           watch    1 = IR sensor sees an obstacle
+  encoderPos           watch    array of 4 encoder counts, [0] to [3] =
+                                wheel 1 to 4 (expand it with the arrow)
+  buttonsPressed       watch    state 16: bit n = 1 while I2C button n+1 held
+
+How to write a value: click the value cell of 'state' (or 'motorPwm'), type
+the new number, press Enter. The program reacts on the next loop pass. A test
+keeps running until you write another number.
+
+
+4. THE TESTS (values of 'state')
+================================
+Every time 'state' changes, the wheels stop and the LEDs turn off first, then
+the new test starts. The servo keeps the last position it was given.
+
+  state   Test                         What to do / what you should see
+  =====   ==========================   ==========================================
+  0       idle                         Wheels stopped, LEDs off. Use it as "stop".
+
+  1       servo -> MAX (2100 us)       The servo that carries the ultrasonic
+  2       servo -> MIN (900 us)        sensor turns to one end, the other end,
+  3       servo -> MIDDLE (1500 us)    and the centre. Go 3, 1, 3, 2, 3 and check
+                                       it moves each time and MIDDLE faces
+                                       straight ahead. (The pulse goes to PCA9685
+                                       channels 0 to 3 together, so it works
+                                       whichever channel the servo is on.)
+
+  4       ultrasonic distance          Watch 'distanceUS'. Hold a flat object
+                                       (book, hand) in front of the sensor at
+                                       about 100, 200 and 500 mm and compare with
+                                       a ruler. Remove it: the value jumps to a
+                                       far wall distance or 0 (no echo). The
+                                       value updates about 10 times a second.
+
+  5 / 6   wheel 1 forward / backward   Only that one wheel turns. Check:
+  7 / 8   wheel 2 forward / backward   - the RIGHT wheel turns (write down which
+  9 / 10  wheel 3 forward / backward     physical wheel is 1, 2, 3, 4: FL/FR/RL/RR)
+  11 / 12 wheel 4 forward / backward   - "forward" and "backward" turn it in
+                                         opposite directions
+                                       - its encoderPos[n-1] changes while it
+                                         turns, and counts the other way in the
+                                         other direction. Note which direction
+                                         counts up.
+                                       While a wheel runs you can change
+                                       'motorPwm' live (e.g. 60 slower, 150
+                                       faster). Do not go to 255 on the block.
+                                       Write 0 to stop.
+
+  13      LEDs constant white          All 8 RGB LEDs on, white. A LED that is
+                                       not white (e.g. pink, cyan) has a dead
+                                       colour channel.
+  14      LEDs blink                   All 8 white, 0.5 s on / 0.5 s off.
+  15      LEDs fade                    All 8 fade up and down in red, then green,
+                                       then blue, then white, and repeat. Check
+                                       each colour on each LED.
+
+  16      I2C buttons -> wheels        Press I2C button n (1 to 4) once: wheel n
+                                       starts forward and RGB LED n-1 turns green.
+                                       Press again: it stops. Watch
+                                       'buttonsPressed' change while a button is
+                                       held. (If the PCA9538A at 0x71 does not
+                                       answer, PuTTY says so and nothing happens.)
+
+  17      bounce test                  temp - not relevant for hardware test
+
+  18+     (not a test)                 The servo goes to MIDDLE.
+
+
+5. THE IR SENSOR (tested in every state)
+========================================
+- Watch 'irLevel' and 'irObstacle' while you move a hand in front of the IR
+  sensor at the front of the cart. 'irObstacle' should be 1 with the hand there
+  and 0 without it.
+- The moment an obstacle APPEARS, the program sets state = 0 (everything
+  stops). Removing the obstacle does nothing: write a new state yourself.
+  So the IR sensor is also an emergency stop during the wheel tests: put your
+  hand in front of it.
+- If it works the wrong way round (state jumps to 0 when you REMOVE the hand,
+  and irObstacle is 1 with nothing there), change IR_OBSTACLE_LEVEL in main.c
+  from GPIO_PIN_RESET to GPIO_PIN_SET and rebuild.
+
+
+6. IF SOMETHING DOES NOT WORK
+=============================
+- 'state' changes but nothing happens: check 'wCounter' is growing (program
+  running, not paused at a breakpoint). If 'state' snaps back to 0, the IR
+  sensor sees something.
+- No wheel turns at all: motor power off? (main.c has a note about a possible
+  motor driver enable on PC3.)
+- LEDs/servo/buttons dead: look at the "I2C 0x.. : NOT FOUND" lines in PuTTY,
+  and for "I2C write error" lines while the test runs.
+- distanceUS always 0: nothing in range, or the sensor/its cable. TRIG = PB2,
+  ECHO = PC12.
+- Live Expressions do not update: they only refresh while the program runs
+  (not while it is halted).
+
+
+7. WHAT TO WRITE DOWN
+=====================
+- Which physical wheel is wheel 1, 2, 3, 4, and for each: does "forward" move
+  the cart forward, and does its encoder count up or down?
+- The ultrasonic readings against the ruler.
+- Any LED with a missing colour.
+- Which I2C chips were FOUND / NOT FOUND.
