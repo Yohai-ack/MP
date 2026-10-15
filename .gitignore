@@ -23,3 +23,5 @@ Release/
 # compiled plan PDF (source .tex only)
 MP2026_plan.pdf
 ass_*_ioc.pdf
+# solution project archives (source is tracked; zips carry build output)
+ass1/solution/**/*.zip
