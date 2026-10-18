@@ -7,6 +7,7 @@
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \setlist{nosep,leftmargin=*}
 \newcommand{\flag}[1]{\textcolor{red}{[#1]}}
+\setlength{\emergencystretch}{3em}
 
 \title{Microprocessor-Based Product Design 2026/27\\[2pt]\large Course plan: sessions and assignments}
 \author{Yohai Ackerman (TA), draft for discussion with Prof.\ Izhak Bucher}
@@ -18,7 +19,7 @@
 \section{Sessions}
 
 \noindent
-\begin{xltabular}{\textwidth}{@{}c l L L >{\raggedright\arraybackslash}p{1.6cm}@{}}
+\begin{xltabular}{\textwidth}{@{}c l L L >{\raggedright\arraybackslash\hyphenpenalty=10000}p{2.3cm}@{}}
 \toprule
 \# & Lecture date & Lecture & Tutorial & Milestone \\
 \midrule
@@ -44,7 +45,7 @@
     \flag{Yohai to discuss with Bucher: move timers, \texttt{HAL\_GetTick} and the UART protocol into lecture 3, since
     Assignment 1 needs them; the blue part could shrink to make room.}
   & RGB and buttons: \texttt{set\_rgb} helper, walking dot with masks, saturating brightness up/down, one-press-one-action.
-  & \\
+  & \textbf{Last material included in A1} \\
 \addlinespace
 4 & 23.11.2026 & Timers: counter, prescaler, period, polling vs.\ interrupts, priorities, \texttt{volatile}; software state machines;
     \texttt{HAL\_GetTick} non-blocking timing.
@@ -62,28 +63,28 @@
 6 & 7.12.2026 & PWM and input capture: duty cycle, H-bridge preview; SR04 trigger/echo by input capture; EXTI on the
     optical sensor (edge triggering revisited).
   & SR04 single distance measurement; EXTI interrupt with a counter; PWM on one motor channel.
-  & A2 out \\
+  & \\
 \addlinespace
 7 & 14.12.2026 & DC motors and encoders: H-bridge drive, quadrature decoding (encoder timer mode), speed measurement, recording
     a step response at a fixed rate.
   & One wheel in the air: open-loop PWM, encoder to rad/s, record and export to MATLAB.
-  & \\
+  & A2 out \\
 \addlinespace
 8 & 21.12.2026 & PI speed control: model fitting (V $\to$ rad/s), design, discretisation and sample rate, PI inside a 100\,Hz
     interrupt, saturation and anti-windup, STM32CubeMonitor.
   & Control workflow: fit, \texttt{sisotool}, \texttt{c2d}, implement the difference equation in C,
     compare simulated vs.\ measured step.
-  & Quiz 2 (first hour) \\
+  & \textbf{Last material included in A2} \\
 \addlinespace
 9 & 28.12.2026 & UART command protocol: interrupt-driven receive, command interpreter, ASCII vs.\ binary framing; MATLAB
     \texttt{serialport} and an App Designer GUI.
   & UART command parser; minimal MATLAB GUI that sends commands and plots telemetry.
-  & A2 due \\
+  & Quiz 2 (first hour) \\
 \addlinespace
 10 & 4.1.2027 & Mecanum kinematics: inverse and forward kinematics, odometry; trajectory generation (trapezoidal profiles, waypoints,
      piecewise-constant $(v_x,v_y,\omega)$ with output-compare timing).
    & Kinematics exercises; driving the cart on the floor; a trajectory array generated in MATLAB and sent to the cart.
-   & \\
+   & A2 due \\
 \addlinespace
 11 & 11.1.2027 & Simulink to C: discrete blocks and sample rates, exporting a controller or filter, integrating it in CubeIDE;
      digital filters (median, IIR).
@@ -99,6 +100,9 @@
    & A3 due 3.3.2027 \\
 \end{xltabular}
 
+\noindent \textbf{Last material included in A1/A2:} an assignment may require material taught up to and including
+that lecture (one week after the assignment is out), and nothing taught later.
+
 \section{Grading}
 
 \noindent
@@ -107,9 +111,11 @@
 Component & Contents & Weight \\
 \midrule
 Quiz 1 & Sessions 1 to 3: logic and numbers, C types and casting, bit operations, IO board LEDs and buttons & 10\% \\
-Quiz 2 & Sessions 4 to 7: timers and interrupts, state machines, I2C, PWM and input capture, motors and encoders & 10\% \\
+Quiz 2 & Sessions 4 to 8: timers and interrupts, state machines, I2C, PWM and input capture, motors and encoders,
+  PI speed control & 10\% \\
 Assignment 1 & Variable types, wrap-around, bit operations and shifting, logic, LED blinking, RGB LEDs & 20\% \\
-Assignment 2 & DC motors and PWM, encoders, timer interrupts, PI speed control, UART (wheels in the air) & 25\% \\
+Assignment 2 & Software and hardware PWM, interrupts (EXTI, input capture), I2C drivers, encoders and speed,
+  step response (wheels in the air) & 25\% \\
 Assignment 3 & Driving on the ground, ultrasonic sensing, MATLAB GUI, Simulink to C & 35\% \\
 \bottomrule
 \end{tabularx}
@@ -332,11 +338,167 @@ int __io_putchar(int ch)
 End every printed line with \texttt{\textbackslash r\textbackslash n}: the output appears only when a line is complete.
 
 \subsection{Assignment 2: ``Wheels in the air''}
-To be defined.
 
-\subsubsection*{Assignment 2: project configuration (\texttt{.ioc})}
-The complete Assignment~1 configuration, plus the wheels (motors and encoders), the ultrasonic sensor and the servo
-that turns it. Do not start from scratch: duplicate \texttt{ass1.ioc} and add only the new items below.
+\textbf{Window:} out at session~7, due at session~10. The assignment may use everything taught up to and including
+session~8.\quad
+\textbf{Hardware:} the cart \textbf{on its block, wheels in the air}, battery and motor power on, the IO board, the IR
+sensor and the ultrasonic sensor.\quad
+\textbf{Project:} \texttt{ass2.ioc}, which you build yourself from \texttt{ass1.ioc} as described in ``Assignment 2:
+project configuration'' below (no \texttt{.ioc} is provided for this assignment).
+
+\medskip\noindent
+\textbf{Provided files.} \texttt{io\_board.h} and \texttt{io\_board.c} from Assignment~1 may still be used in Parts A,
+B, D and E. Part~C replaces them with your own driver. The \texttt{printf} redirect of Appendix~A1 is needed again.
+
+\medskip\noindent
+\textbf{Learning outcome.} Students drive outputs with software and with hardware PWM and can explain the difference;
+they react to sensors by polling and by interrupts and can measure the advantage of interrupts; they write their own
+I2C driver from a datasheet; they configure an encoder timer, compute wheel speed in a way that survives counter
+wrap-around, and record a step response at a fixed rate for analysis in MATLAB.
+
+\medskip\noindent
+\textbf{Safety.} The wheels must not touch anything while they turn. Keep fingers and cables away from the wheels, and
+set every PWM duty to 0 at start-up.
+
+\paragraph{Part A: Three ways to make a PWM.}
+A PWM signal is on for $M$ ticks out of every $N$ ticks: the PWM frequency is $1/(N \cdot T)$, where $T$ is the tick,
+and the duty is $M/N$. A hardware timer has the same three parameters: the prescaler PSC sets the tick, ARR sets the
+period ($N = \mathrm{ARR}+1$) and CCR sets the on-time ($M = \mathrm{CCR}$). In this part you build the same PWM in
+three ways and find the limits of each. $N$ and $M$ are global variables that you change from Live Expressions while
+the program runs.
+\begin{enumerate}[label=A.\arabic*, leftmargin=2.2em]
+  \item Method 1: software PWM timed by \texttt{HAL\_GetTick}, on LD2. \emph{This task demonstrates a method that is
+        not good enough, and why.} The tick is fixed at $T = 1$\,ms (the software ``prescaler'' cannot be changed). In
+        the main loop, keep LD2 on for the first $M$ ticks of every period of $N$ ticks, and off for the rest.
+        \begin{enumerate}[label=(\alph*)]
+          \item With $N = 100$ (100 duty levels), sweep $M$ from 0 to 100. What PWM frequency do you get, and what
+                do you see?
+          \item Reduce $N$ until the LED stops flickering. Note $N$, the PWM frequency and the number of duty levels
+                that are left.
+          \item Calculate the $N$ needed for the 17\,kHz PWM that TIM2 uses for the motors, and explain why it cannot
+                be done with a 1\,ms tick.
+        \end{enumerate}
+        In your report, give a table that maps $T$, $N$ and $M$ to PSC, ARR and CCR, with the formulas for the
+        frequency and the duty.
+  \item Method 2: software PWM in a timer interrupt. TIM7 interrupts at 10\,kHz ($T = 100\,\mu$s, see the
+        configuration section). In its callback, count ticks and switch the output on and off with the same $N$ and
+        $M$ as in A.1.
+        \begin{enumerate}[label=(\alph*)]
+          \item On LD2, with $N = 100$: what PWM frequency do you get now, and does the LED flicker?
+          \item On wheel~1: in the callback, write 0 or 10\,000 to \texttt{TIM2->CCR1} (fully off or fully on). Try
+                $N = 100$ and $N = 10$ at 50\,\% duty, and describe the motion and the sound of the wheel.
+          \item CPU cost. Count the passes of the main loop per second and print the count. Then make TIM7 faster
+                (reduce its period: 20, 50, 100\,kHz and more) and record the count each time, until the main loop
+                almost stops. Calculate the interrupt rate a 17\,kHz PWM with 100 duty levels would need, and explain
+                why method~2 cannot reach it.
+          \item Measure how long one update of an RGB LED takes over I2C (time 1000 calls of \texttt{setLedChannel}
+                with \texttt{HAL\_GetTick}). Explain why method~2 cannot drive the RGB LEDs from the TIM7 callback.
+        \end{enumerate}
+  \item Method 3: hardware PWM. The timer compares its counter with CCR on every clock and drives the pin itself, so
+        no code runs while the PWM is on. On the wheel, set the duty with \texttt{TIM2->CCR1} (TIM2 runs at 17\,kHz
+        with 10\,000 levels). Sweep the duty from 0 to 100\,\% in steps of 5\,\% and find the smallest duty at which
+        the wheel starts to turn. On the RGB LEDs, set the brightness of LED~0 once with \texttt{setLedChannel}: the
+        PCA9634 chip has its own hardware PWM. Count the main-loop passes per second again.
+  \item Compare the three methods in a table: tick, PWM frequency, number of duty levels, main-loop passes per second,
+        and what you see and hear, on LD2, on the RGB LED and on the wheel. Explain which method suits an LED and which
+        a motor, and why.
+\end{enumerate}
+
+\paragraph{Part B: Polling vs.\ interrupts.}
+Wheel~1 turns at a constant duty of 40\,\%. It must stop as soon as the IR sensor detects an obstacle \textbf{or} the
+ultrasonic sensor measures a distance below 15\,cm, and it may start again only after both have been clear for 1\,s.
+The main loop also does the ``rest of the program'': it updates all 8 RGB LEDs (green while the wheel turns, red while
+it is stopped), prints one status line, and then calls \texttt{HAL\_Delay(150)} to stand for other work. Keep this
+workload in both versions.
+\begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
+  \item Without any interrupts. Disable the IR interrupt with \texttt{HAL\_NVIC\_DisableIRQ(EXTI9\_5\_IRQn)}, read PA7
+        with \texttt{HAL\_GPIO\_ReadPin}, and start the echo capture with \texttt{HAL\_TIM\_IC\_Start} (not the
+        \texttt{\_IT} version). Read each captured edge by polling the capture flag of TIM5 channel~2
+        (\texttt{\_\_HAL\_TIM\_GET\_FLAG(\&htim5, TIM\_FLAG\_CC2)}, then the captured value with
+        \texttt{HAL\_TIM\_ReadCapturedValue}). Then test:
+        \begin{enumerate}[label=(\alph*)]
+          \item Move a hand quickly past the IR sensor, 10 times. How many times did the wheel stop?
+          \item Over 10\,s, how many of the 100 ultrasonic measurements (one every 100\,ms) gave a distance?
+          \item Measure the loop period with \texttt{HAL\_GetTick}. From it, give the worst-case time from an obstacle
+                appearing to the wheel stopping, and the angle the wheel turns in that time at 40\,\% duty (use your
+                speed measurement from Part~D or estimate it from the video).
+        \end{enumerate}
+  \item With interrupts. Use the EXTI interrupt of PA7 (both edges) and the TIM5 input-capture interrupt
+        (\texttt{HAL\_TIM\_IC\_Start\_IT}). The callbacks stop the wheel themselves, by writing 0 to \texttt{TIM2->CCR1},
+        and set a flag; the main loop, with the same workload as in B.1, handles the LEDs and the restart. Repeat
+        tests (a) to (c).
+\end{enumerate}
+In your report, compare B.1 and B.2 in a table and explain the difference. Explain also why the callback may write
+\texttt{TIM2->CCR1} but must not update the RGB LEDs, and which variables must be \texttt{volatile}. Show both
+versions in the video, with the wheel continuing to turn in B.1.
+
+\paragraph{Part C: Your own I2C driver.}
+From now on the IO board is no longer a black box: do not use \texttt{io\_board.c} in this part. Write your own
+functions on top of \texttt{HAL\_I2C\_Mem\_Write} and \texttt{HAL\_I2C\_Mem\_Read}, using the datasheets of the
+PCA9634, PCA9538A and PCA9685.
+\begin{enumerate}[label=C.\arabic*, leftmargin=2.2em]
+  \item Scan the bus: try every 7-bit address from 0x01 to 0x7F with \texttt{HAL\_I2C\_IsDeviceReady} and print the
+        addresses that answer. Compare the list with the table of devices in the configuration section. In your
+        report, explain what the STM32 sees on the bus when no chip has the address (ACK and NACK).
+  \item LED driver. Write \texttt{ledChipInit(addr)} and \texttt{ledSetChannel(addr, channel, value)} for the
+        PCA9634, setting the registers the datasheet requires (mode registers, output mode of each channel, PWM
+        value). Use them to show a colour of your choice on each of the 8 RGB LEDs. In your report, list every
+        register you write and why. Note how the LEDs are wired: check whether a larger PWM value makes an LED
+        brighter or dimmer.
+  \item One transaction or many. Set all 8 channels of one PCA9634 twice: once with 8 separate writes, and once with a
+        single write of 8 bytes using the chip's auto-increment (see the control register in the datasheet). Time
+        1000 repetitions of each. From the I2C bit rate (100\,kHz) and the number of bits in each transaction
+        (address, register, data, ACK bits, start and stop), calculate the expected times and compare them with your
+        measurements.
+  \item Buttons. Read the input register of the PCA9538A with \texttt{HAL\_I2C\_Mem\_Read} and print the state of the 4
+        buttons whenever it changes. Check and print the return value of every HAL I2C call; show what is printed
+        when you read from an address that has no chip.
+  \item Servo. Initialise the PCA9685 for 50\,Hz (PRESCALE = 121) and move the servo to 900, 1500 and 2100\,$\mu$s.
+        In your report, calculate the PWM frequency that PRESCALE = 121 gives, and the register values for each pulse
+        width.
+        \flag{For Bucher and Yohai, delete before publishing: confirm on the board which PCA9685 channel the servo is
+        on, and give it here.}
+\end{enumerate}
+
+\paragraph{Part D: Encoders and wheel speed.}
+\begin{enumerate}[label=D.\arabic*, leftmargin=2.2em]
+  \item Encoder resolution. The encoder timer of wheel~1 (TIM1) can count in \emph{Encoder Mode TI1} or in \emph{Encoder
+        Mode TI1 and TI2}. With the motor power off, mark the wheel and turn it by hand exactly 5 revolutions forward,
+        then 5 back, and print the counter before and after. Do it with each of the two settings (change it in
+        \texttt{ass2.ioc} and generate the code again). Give the counts per revolution and the resolution in degrees for
+        each setting, and explain the factor between them from the A and B signals of a quadrature encoder.
+  \item Speed and wrap-around. In the 100\,Hz interrupt of TIM6, read the counter of TIM1 and compute the wheel speed
+        from the change since the previous sample. The counter is 16 bits wide, so it wraps around (65\,535 $\to$ 0
+        forward, 0 $\to$ 65\,535 backward). Compute the change in two ways:
+        \begin{enumerate}[label=(\alph*)]
+          \item naively, as the difference of the two readings stored in \texttt{int32\_t} variables;
+          \item as \texttt{(int16\_t)(now - previous)}, with \texttt{now} and \texttt{previous} of type
+                \texttt{uint16\_t}.
+        \end{enumerate}
+        Run the wheel at constant duty, forward and then backward, long enough for the counter to wrap several times.
+        Record both speeds in rad/s and plot them against time. In your report, explain the spikes of (a), why (b)
+        gives the right answer, and the highest wheel speed (in rev/s) for which (b) still works at 100\,Hz, for each
+        encoder setting of D.1. Relate it to the wrap-around of Assignment~1, Part~A.
+\end{enumerate}
+
+\paragraph{Part E: Step response to MATLAB.}
+\begin{enumerate}[label=E.\arabic*, leftmargin=2.2em]
+  \item With wheel~1 at rest, step the duty from 0 to 30\,\% and record the speed of D.2(b) at 100\,Hz for 2\,s, into an
+        array inside the TIM6 interrupt. Only after the recording ends, print the array to PuTTY as two columns
+        (time in s, speed in rad/s). In your report, explain why the samples are stored first and printed afterwards,
+        and not printed inside the interrupt.
+  \item Save the PuTTY output to a file (PuTTY logging), load it into MATLAB and plot it. Repeat for steps to 50\,\%
+        and 70\,\%, and plot the three responses on one figure.
+  \item Fit a first-order model $\omega(t) = K\,u\,(1 - e^{-t/\tau})$ to each response. Give $K$ and $\tau$ for each
+        step size, and comment on whether the motor behaves linearly. Use the dead zone you found in A.4 in your
+        explanation.
+\end{enumerate}
+
+\subsubsection*{Assignment 2: project configuration (you build \texttt{ass2.ioc})}
+No \texttt{.ioc} file is provided for Assignment~2: you create \texttt{ass2.ioc} yourself, from \texttt{ass1.ioc} and the
+pinout and settings in this section. It contains the complete Assignment~1 configuration, plus the wheels (motors and
+encoders), the ultrasonic sensor and the servo that turns it. Do not start from scratch: duplicate \texttt{ass1.ioc}
+and add only the new items below.
 \begin{enumerate}
   \item Open \texttt{ass1.ioc} in STM32CubeMX and save a copy with \emph{File $\to$ Save Project As} into a new folder
         named \texttt{ass2}. This gives \texttt{ass2.ioc}; \texttt{ass1.ioc} stays unchanged.
@@ -345,8 +507,9 @@ that turns it. Do not start from scratch: duplicate \texttt{ass1.ioc} and add on
 \end{enumerate}
 All timer clocks are 170\,MHz.
 
-\paragraph{Pins from Assignment 1.} PA5 (LD2), PC13 (B1), PA2/PA3 (LPUART1), PB8/PB9 (I2C1), PA7 (IR\_SENSOR), with
-the same settings as in Assignment~1.
+\paragraph{Pins from Assignment 1.} PA5 (LD2), PC13 (B1), PA2/PA3 (LPUART1), PB8/PB9 (I2C1), with the same settings as
+in Assignment~1. \textbf{One change:} PA7 (IR\_SENSOR) becomes \textbf{GPIO\_EXTI7}, trigger on rising and falling
+edges, no pull, label kept. It can still be read with \texttt{HAL\_GPIO\_ReadPin}.
 
 \paragraph{Wheels: motors and encoders.} Each motor is driven by one PWM channel (speed) and one direction pin. Each
 encoder is read by its own timer in encoder mode.\leavevmode\\[2pt]
@@ -376,7 +539,8 @@ PC12 & TIM5\_CH2, Input Capture direct mode & ECHO: both edges are captured; the
 \end{tabularx}
 
 \smallskip\noindent
-Distance: $d\,[\mathrm{mm}] = t_\mathrm{echo}\,[\mu\mathrm{s}] \times 343 / 2000$.
+Distance: $d\,[\mathrm{mm}] = t_\mathrm{echo}\,[\mu\mathrm{s}] \times 343 / 2000$.\\
+The trigger pulses start only after \texttt{HAL\_TIM\_PWM\_Start(\&htim5, TIM\_CHANNEL\_1)}.
 
 \paragraph{Peripherals.}\leavevmode\\[2pt]
 \begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}p{4.2cm} L@{}}
@@ -394,7 +558,14 @@ TIM1, TIM8, TIM3, TIM4 & Combined channels: Encoder Mode TI1 & Prescaler 0, peri
 TIM5 & CH1 PWM Generation, CH2 Input Capture direct mode & Prescaler 9, period 1\,699\,999: tick = 1/17\,$\mu$s,
   period 100\,ms. CH1 pulse = 170 (10\,$\mu$s). CH2 polarity: both edges \\
 \addlinespace
-NVIC & & EXTI line [15:10] (B1), TIM2 and TIM5 global interrupts enabled \\
+TIM7 & Activated (basic timer) & Prescaler 169, period 99: 1\,MHz tick, update interrupt at 10\,kHz (the
+  software PWM of A.2) \\
+\addlinespace
+TIM6 & Activated (basic timer) & Prescaler 169, period 9\,999: 1\,MHz tick, update interrupt at 100\,Hz (the sample
+  rate of Parts D and E) \\
+\addlinespace
+NVIC & & EXTI line [9:5] (IR sensor), EXTI line [15:10] (B1), TIM2, TIM5, TIM6 (TIM6\_DAC) and TIM7 (TIM7\_DAC) global interrupts
+  enabled \\
 \bottomrule
 \end{tabularx}
 
@@ -412,6 +583,6 @@ Address (7-bit) & Chip & Role \\
 To be defined.
 
 \subsection{Quizzes}
-Two quizzes, each 10\% of the final grade, held in the first hour of the lecture: Quiz 1 in session 4 (23.11.2026), Quiz 2 in session 8 (21.12.2026).
+Two quizzes, each 10\% of the final grade, held in the first hour of the lecture: Quiz 1 in session 4 (23.11.2026), Quiz 2 in session 9 (28.12.2026).
 
 \end{document}

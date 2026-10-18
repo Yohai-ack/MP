@@ -67,7 +67,9 @@ Course-specific technical conclusions belong here or in a document in this folde
   I2C1, EXTI15_10). Checked 2026-10-15: CubeMX 6.18 headless generates it, and it builds with
   `io_board.c`, 0 warnings. Tutorial 5 (first tutorial after A1 is due) teaches creating a `.ioc`.
   For A2, students duplicate `ass1.ioc` (CubeMX *Save Project As* → `ass2/ass2.ioc`) and add only
-  the new items.
+  the new items. **No `ass2.ioc` is ever given to students** (Yohai, 2026-10-17): they get only the
+  pinout and settings, as the "Assignment 2: project configuration" section of the A2 instructions.
+  A TA-built `ass2.ioc`, if made to check that section, is TA-only (under a `solution/` folder).
 - **Pin/peripheral configuration for students: a "project configuration (.ioc)" section at the end
   of each assignment** in `MP2026_plan.tex` (Yohai, 2026-10-11; replaced the separate
   `ass_*_ioc.tex` files, now deleted). For A1 it's a reference list of what `ass1.ioc` contains.
@@ -122,7 +124,13 @@ creativity bonus). Dates go on Moodle.
 A1 "No wheels" (NUCLEO + IO board: types, wrap-around, bit ops, logic, blinking, RGB). A2 "Wheels in
 the air" (motors on the block). A3 "Wheels on the ground". **Weights: Quiz 1 10%, Quiz 2 10%,
 A1 20%, A2 25%, A3 35%.** Each quiz takes the **first hour of a lecture**: Quiz 1 in lecture 4
-(23.11.2026), Quiz 2 in lecture 8 (21.12.2026). Yohai will probably write the quizzes.
+(23.11.2026), Quiz 2 in lecture 9 (28.12.2026; moved from lecture 8 on 2026-10-17). Yohai will probably
+write the quizzes.
+
+**Schedule as of 2026-10-17 (Yohai):** A1 out session 2, due session 5. A2 out session 7 (14.12),
+due session 10 (4.1.2027) (both moved one week later). **"Last material included" rule:** an
+assignment may require material taught up to and including the lecture one week after it is out
+(A1: session 3, A2: session 8), nothing later. Shown in bold in the plan's milestone column.
 
 **Work order and roles (agreed 2026-10-08):** the current main focus is **writing Assignment 1**.
 Bucher derives the first lectures' content from it. After that: A2 and A3; Bucher writes the
@@ -136,8 +144,11 @@ a lab meeting for open questions. Checked against the Technion calendar. A3 is o
 
 **Assignment emphasis (Yohai, 2026-10-02):** start from the 2025 cart assignments, but shift the
 focus to **coding, hardware and timing issues**. Kinematics and trajectory work is "less
-interesting", so give it less weight. A2/A3 contents are to be discussed later; don't redesign them
-until asked.
+interesting", so give it less weight. **A2 drafted 2026-10-17** from Yohai's outline: A PWM in three ways
+(HAL_GetTick 1 ms software PWM as a demo of its limit; software PWM in a 10 kHz TIM7 interrupt and its
+CPU cost; hardware PWM: TIM2 CCR and the PCA9634's own PWM), B polling vs. interrupts (IR + ultrasonic stop a
+wheel), C own I2C driver, D encoder resolution (TI1 vs. TI1 and TI2) and wrap-safe speed, E step
+response to MATLAB. PI control is no longer in A2 (likely A3). A3 contents: don't design until asked.
 
 ### 4.3 Meeting plan (syllabus)
 
@@ -216,8 +227,10 @@ new_pcb_demo.zip, test_pcb2a.zip
 ```
 MP.md                          this file
 CLAUDE.md                      auto-loaded pointer to this file
-MP2026_plan.tex                12-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 detailed)
-                               (only the .tex goes in git, not the PDF)
+MP2026_plan.tex                12-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 and A2 detailed)
+                               (the .tex goes in git, not the PDF)
+MP2026_plan.docx               Word copy of the plan for Bucher, made with /skl_glb_tex2Word (in git).
+                               Regenerate it after plan edits before sending it to him
 ass1/                          files handed to A1 students: ass1.ioc (the project configuration),
                                io_board.h, io_board.c (copied
                                unmodified from Bucher's Lesson 3 package). The ultrasonic sensor is
@@ -285,6 +298,12 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
   file is only picked up after CubeIDE regenerates it (Yohai builds once in the IDE). Building is
   fine; **flashing the board is not**, unless Yohai explicitly asks.
 - **Deliverables for Bucher** are prepared here; Yohai moves them to the shared folder himself.
+- **Word copies for Bucher:** `/skl_glb_tex2Word MP2026_plan.tex --overwrite` (real tables, red/blue
+  notes kept as the Word styles "Color red"/"Color blue"). It reports TABLES and LEAKS; both must be clean.
+- **Scripted edits of the .tex:** never put backslashes inside a bash heredoc (the shell tool mangles
+  `\\`, which once spliced the plan at the wrong "Part B" and duplicated half of it, 2026-10-18).
+  Write the script to a file and build backslashes with `chr(92)`. After any scripted splice, check
+  that each heading appears once and diff against the last commit.
 - Planned documents (create when the task starts, not before): `assignments/` (unified assignment
   document + solutions + rubrics), `tutorials/`, `quiz/`, and a `PROGRESS.md` once there is ongoing
   task state to track.
@@ -309,16 +328,23 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
    - Is the PCA9538A button chip fitted on this year's IO board? The test code never reads it.
    - `main.h` has a stale comment with TRIG/ECHO swapped (ECHO = PB2, TRIG = PC12). The `.ioc` and
      `main.c` (TRIG = PB2 TIM5_CH1 PWM, ECHO = PC12 TIM5_CH2 IC) are correct.
-   - A2 will need a periodic control interrupt (e.g. 100 Hz). The test project has none, so the A2
-     configuration section will need a timer added once A2 is written.
+   - A2's 100 Hz sample interrupt: TIM6 (PSC 169, ARR 9999) chosen in the A2 configuration section,
+     plus TIM7 (PSC 169, ARR 99, 10 kHz) for the software PWM of A.2,
+     and PA7 becomes GPIO_EXTI7 (EXTI9_5). Not yet checked in CubeMX: build ass2.ioc and verify.
 2. **Do A1 students get Bucher's `io_board.h`/`.c`** (Lesson 3 package, `lessons/Lesson_3/
    lesson3_cubeide_sources/`)? His syllabus and Lesson 3 slides say so ("provided LED helper
    library", "black-box principle"), and A1 as written depends on it for the RGB LEDs and buttons,
    but Yohai and Bucher haven't agreed it. If it is given as is, B.4 must forbid
    `readButtonsPressed()` (it already does the invert + mask). Options: as is, a trimmed copy, or
    none (then A1 needs rethinking).
-3. A2 is due 28.12.2026 (session 9) but A3 only goes out on 11.1.2027, a two-week gap. Intended?
-4. Where does the servo-scanned sonar go: A2, A3 or a bonus?
+3. (Resolved 2026-10-17: A2 is now due 4.1.2027, one week before A3 goes out on 11.1.2027.)
+4. Where does the servo-scanned sonar go: A2, A3 or a bonus? (A2 now uses the sonar alone in Part B
+   and the servo alone in C.5; the scanned map is still unplaced.)
+5. 🔴 **`io_board.c` writes PCA9634 MODE1 = 0x20, commented "auto-increment".** On the PCA9634 the
+   MODE1 auto-increment bits are, I believe, read-only and set through the control byte. Check the
+   datasheet before A2 C.3 (one transaction vs. many) is published; if confirmed, tell Bucher.
+6. Agree with Bucher: Quiz 2 moved to lecture 9 and now covers sessions 4 to 8 (my assumption), and
+   PI speed control is no longer in A2 (Yohai's outline, 2026-10-17). It probably goes to A3.
 
 ## 7. Plan rationale and notes (kept out of MP2026_plan.tex)
 
@@ -328,7 +354,7 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
   follow the syllabus order, otherwise.
 - **I2C before PWM (session 5):** A1 uses the IO board as a black box, so opening it right after A1
   motivates writing the drivers.
-- **Quizzes:** Quiz 1 (lecture 4) covers sessions 1 to 3, Quiz 2 (lecture 8) covers sessions 4 to 7.
+- **Quizzes:** Quiz 1 (lecture 4) covers sessions 1 to 3, Quiz 2 (lecture 9) covers sessions 4 to 8.
   That coverage split is my reading of the plan and appears in the plan's grading table; Bucher and
   Yohai agreed only on the dates and weights.
 - **Submission format (2025, assumed kept):** one zip per assignment with the CubeIDE project,
