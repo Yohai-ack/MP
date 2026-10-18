@@ -31,6 +31,8 @@ the course is settled, update this file in the same session.
   the checkBounce instruction sheets) should give both. The tools differ too: CubeIDE 2.2.0 and its
   ARM toolchain are on the C: PC (§5). On the D: PC only a stub `C:\ST\STM32CubeIDE_1.5.1` was
   found (no compiler, 2026-10-14), so there the best check is a host-GCC `-fsyntax-only`.
+  pdflatex works there (checked 2026-10-18), and so does PowerPoint, which is also used to render
+  slides for checking.
 - **Last year's folder** `C:\Users\yohai\OneDrive - Technion\Bucher Izhak's files - Shared_2025\`:
   **READ-ONLY, ALWAYS**, same rule as above (see §4.6a).
 - Read the shared folder freely to understand the course. Bucher will keep adding material
@@ -53,7 +55,7 @@ the course is settled, update this file in the same session.
 3. **Assignments.** Write **one unified assignments document** covering all labs. Bucher's lessons
    mention assignments piecemeal; the unified doc is ours. Then **solve** the assignments (reference
    solutions).
-4. **Quizzes.** Two quizzes (lectures 4 and 8). Help write them and their solutions.
+4. **Quizzes.** Two quizzes (lectures 4 and 9). Help write them and their solutions.
 5. **Grading.** Possibly help check submitted assignments.
 
 Course-specific technical conclusions belong here or in a document in this folder, not only in chat.
@@ -75,7 +77,9 @@ Course-specific technical conclusions belong here or in a document in this folde
   `ass_*_ioc.tex` files, now deleted). For A1 it's a reference list of what `ass1.ioc` contains.
   Each lists only what that assignment needs, so students
   aren't confused, and they're **cumulative**: A2's contains everything in A1's, even where A2
-  doesn't use it.
+  doesn't use it. A3 may share A2's or get its own. Unconfirmed hardware stays out of them (open
+  items in §6). All values come from the working hardware-test project
+  (`hardwaret_test/align_servo.ioc` + `main.c`).
 - **CubeIDE 2.x has no built-in CubeMX.** Double-clicking a `.ioc` opens the separate STM32CubeMX
   (installed at `%LOCALAPPDATA%\Programs\STM32CubeMX`). Projects come into CubeIDE through
   *File → Import → STM32CubeMX/STM32CubeIDE Project*. Students need both programs. To check a
@@ -83,9 +87,7 @@ Course-specific technical conclusions belong here or in a document in this folde
   opens the GUI), with `config load`, `project toolchain Makefile`, `project path`,
   `project generate`, `exit`; then `make` with CubeIDE's toolchain.
 - **The system clock is PLL from HSI (16 MHz / 4 × 85 / 2 = 170 MHz)**, not HSE, in the working
-  hardware-test project (`RCC_PLLSOURCE_HSI`). The HSE/LSE pins are only board defaults. A3 may share A2's or get its own. Unconfirmed hardware stays out of them; the
-  open items live in §6 below. All values come from the working hardware-test project
-  (`hardwaret_test/align_servo.ioc` + `main.c`).
+  hardware-test project (`RCC_PLLSOURCE_HSI`). The HSE/LSE pins are only board defaults.
 - **USART3 (PC10 TX / PC11 RX, 115200)** is the **wireless module** (used in 2025). It may be used
   in A3 this year, so it's left out of the A1/A2 docs for now.
 - **History:** in 2025, Lab 1 ran on an older lab system (F446, steppers), and Labs 2–3 on the
@@ -227,7 +229,7 @@ new_pcb_demo.zip, test_pcb2a.zip
 ```
 MP.md                          this file
 CLAUDE.md                      auto-loaded pointer to this file
-MP2026_plan.tex                12-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 and A2 detailed)
+MP2026_plan.tex                13-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 and A2 detailed)
                                (the .tex goes in git, not the PDF)
 MP2026_plan.docx               Word copy of the plan for Bucher, made with /skl_glb_tex2Word (in git).
                                Regenerate it after plan edits before sending it to him
@@ -251,10 +253,15 @@ ass1/solution/                 TA-ONLY, never handed to students. checkBounce/ =
 tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section per tutorial (may be
                                split into 12 PDFs for students later). Built from a pptxgenjs
                                script (scratchpad). Content so far: tutorial 1 (USER CODE
-                               sections), tutorial 4 (fast vs slow outputs, blocking, the
+                               sections), tutorial 4 (slides 13 to 16, added 2026-10-18 with
+                               python-pptx: timer-to-callback flow chart + formulas; timing
+                               definitions t_clk, t_tick, T_period, t_ISR, t_free with the rule
+                               t_ISR < T_period (works/fails cases); worked example TIM7
+                               100 us / TIM6 1 s; the ISR
+                               definition and HAL callback chain; then fast vs slow outputs, blocking, the
                                logic/store/transport layers, the super loop), tutorial 5
                                (creating a .ioc in CubeMX: flow, rebuilding ass1.ioc in two
-                               tables, duplicating it for A2; slides 19 to 22, added in place
+                               tables, duplicating it for A2; now slides 23 to 26, added in place
                                2026-10-15 by duplicating slides 9 and 16). Once Yohai edits
                                it in PowerPoint, never regenerate it: add slides in place
 
@@ -305,8 +312,17 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
   Write the script to a file and build backslashes with `chr(92)`. After any scripted splice, check
   that each heading appears once and diff against the last commit.
 - Planned documents (create when the task starts, not before): `assignments/` (unified assignment
-  document + solutions + rubrics), `tutorials/`, `quiz/`, and a `PROGRESS.md` once there is ongoing
+  document + solutions + rubrics), `quiz/`, and a `PROGRESS.md` once there is ongoing
   task state to track.
+- **Timing vocabulary** (Yohai, 2026-10-18): explain timing in time [s], not frequency. Terms:
+  t_clk = 1/f_clk, t_tick = (PSC+1)·t_clk, T_period = (ARR+1)·t_tick, t_ISR (one pass through the
+  interrupt), t_free = T_period − t_ISR. Rule: t_ISR < T_period, with a margin (rule of thumb
+  about 10 %). The term **ISR** is used: taught in lecture 4 and on tutorial 4's slides 13 to 16.
+  In A2's software PWM, "tick" means one TIM7 period; say so wherever both meanings could meet.
+- **Editing the tutorials deck:** insert slides in place with a python-pptx script kept in the
+  scratchpad. Back up the deck first, and add each new slide to its tutorial's section. The deck
+  must be closed in PowerPoint, or the save is refused. Check by rendering through PowerPoint COM
+  (`Presentations.Open` on a copy, then `Slides(i).Export(...png)`).
 
 ## 6. Open questions for Yohai
 
@@ -345,6 +361,10 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
    datasheet before A2 C.3 (one transaction vs. many) is published; if confirmed, tell Bucher.
 6. Agree with Bucher: Quiz 2 moved to lecture 9 and now covers sessions 4 to 8 (my assumption), and
    PI speed control is no longer in A2 (Yohai's outline, 2026-10-17). It probably goes to A3.
+7. 🔴 **The motor winding's electrical time constant L/R** (red flag in A2 A.2(b), for Bucher): we
+   assume about 1 ms, which would explain why a 100 Hz PWM is loud.
+8. 🔴 **Measure t_ISR on the board** (Debug build). Tutorial 4's slides 14 and 15 and the A2 Part A
+   answers assume about 1 µs (170 cycles).
 
 ## 7. Plan rationale and notes (kept out of MP2026_plan.tex)
 
