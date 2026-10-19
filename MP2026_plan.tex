@@ -21,15 +21,15 @@
 \noindent
 \begin{xltabular}{\textwidth}{@{}c l L L >{\raggedright\arraybackslash\hyphenpenalty=10000}p{2.3cm}@{}}
 \toprule
-\# & Lecture date & Lecture & Tutorial & Milestone \\
+\# & Lecture date & Lecture & Tutorial (one week after the lecture) & Milestone \\
 \midrule
 \endhead
 \bottomrule
 \endfoot
 1 & 2.11.2026 & Intro and product mindset; logic gates, flip-flops, counters, edge vs.\ level; integers in binary/hex, two's
     complement, overflow.
-  & First STM32 application: project from a provided \texttt{.ioc} $\to$ build $\to$ flash, blink LD2, \texttt{printf} to PuTTY, breakpoints and
-    live expressions.
+  & First STM32 application: project from a provided \texttt{.ioc} $\to$ build $\to$ flash, breakpoints and
+    live expressions, blink LD2, \texttt{printf} to PuTTY.
   & \\
 \addlinespace
 2 & 9.11.2026 & Python $\to$ C: types (\texttt{stdint}), casting, scope, \texttt{\#define}/\texttt{const}, operators and
@@ -44,7 +44,7 @@
     rate, the 8N1 frame (start bit, 8 data bits, stop bit), the time to send one character.
     \flag{Yohai to discuss with Bucher: move timers, \texttt{HAL\_GetTick} and the UART protocol into lecture 3, since
     Assignment 1 needs them; the blue part could shrink to make room.}
-  & RGB and buttons: \texttt{set\_rgb} helper, walking dot with masks, saturating brightness up/down, one-press-one-action.
+  & Edge vs.\ level triggering; blinking with \texttt{HAL\_GetTick} and \texttt{HAL\_Delay}.
   & \textbf{Last material included in A1} \\
 \addlinespace
 4 & 23.11.2026 & Timers: counter, prescaler, period, polling vs.\ interrupts, priorities, \texttt{volatile}; software state machines;
@@ -58,16 +58,14 @@
 \addlinespace
 5 & 30.11.2026 & The I2C bus opened: protocol, addressing, ACK/NACK, pull-ups; HAL I2C; register-level drivers for PCA9634,
     PCA9538A, PCA9685 (servo pulses).
-  & I2C bus scan: detect the five IO-board chips (3$\times$ PCA9634 RGB LED drivers, PCA9538A buttons, PCA9685 servo driver); rewrite \texttt{set\_rgb} on raw \texttt{HAL\_I2C\_Mem\_Write}; servo sweep.
-    Short part: creating a \texttt{.ioc} in STM32CubeMX (board selection, pins and labels, peripherals, clock, NVIC),
-    shown by rebuilding \texttt{ass1.ioc}; then duplicating it as the start of \texttt{ass2.ioc}.
+  & I2C.
   & A1 due \\
 \addlinespace
 6 & 7.12.2026 & PWM and input capture: duty cycle, H-bridge preview; SR04 trigger/echo by input capture; EXTI on the
     optical sensor (edge triggering revisited).
-  & Blocking vs.\ non-blocking: writing a register inside the STM32 (one store, nanoseconds) vs.\ a register on
-    another chip over I2C (about 0.3\,ms); updating the 24 LED registers one per loop pass; the decide, store and
-    transport layers and the super loop. SR04 single distance measurement; EXTI interrupt with a counter.
+  & The \texttt{.ioc} file: creating a \texttt{.ioc} in STM32CubeMX .
+    SR04 reading.
+    Self-learning, blocking vs.\ non-blocking.
   & \\
 \addlinespace
 7 & 14.12.2026 & DC motors and encoders: H-bridge drive, quadrature decoding (encoder timer mode), speed measurement, recording
@@ -121,9 +119,9 @@ Quiz 2 & Sessions 4 to 8: timers and interrupts, state machines, I2C, PWM and in
   PI speed control & 10\% \\
 Assignment 1 & Variable types, wrap-around, bit operations and shifting, logic, LED blinking, RGB LEDs & 20\% \\
 Assignment 2 & Software and hardware PWM, interrupts (EXTI, input capture), I2C drivers, encoders and speed,
-  step response (wheels in the air) & 25\% \\
+  step response (wheels in the air) & 30\% \\
 Assignment 3 & PI speed control from the fitted model, driving in straight lines, obstacle avoidance with the IR and
-  ultrasonic sensors, a state machine; bonus: return to the start & 35\% \\
+  ultrasonic sensors, a state machine; bonus: return to the start & 30\% \\
 \bottomrule
 \end{tabularx}
 
@@ -153,7 +151,7 @@ the provided IO-board functions. The I2C internals stay a black box until sessio
 
 \medskip\noindent
 \textbf{Provided files.} The project configuration is provided as \texttt{ass1.ioc}: you do not build it yourself (see
-``Assignment 1: project configuration'' below; creating a \texttt{.ioc} is taught in tutorial~5). The RGB LEDs and the
+``Assignment 1: project configuration'' below; creating a \texttt{.ioc} is taught in tutorial~6). The RGB LEDs and the
 buttons sit on the I2C bus, which is taught only in session~5. Until then, use the provided files \texttt{io\_board.h} and \texttt{io\_board.c}: copy \texttt{io\_board.h} into \texttt{Core/Inc}
 and \texttt{io\_board.c} into \texttt{Core/Src} (in CubeIDE, refresh the project with F5 afterwards). In
 \texttt{main.c}, add \texttt{\#include "io\_board.h"} inside \texttt{USER CODE BEGIN Includes} (include the

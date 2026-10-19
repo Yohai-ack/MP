@@ -31,7 +31,8 @@ the course is settled, update this file in the same session.
   the checkBounce instruction sheets) should give both. The tools differ too: CubeIDE 2.2.0 and its
   ARM toolchain are on the C: PC (§5). On the D: PC only a stub `C:\ST\STM32CubeIDE_1.5.1` was
   found (no compiler, 2026-10-14), so there the best check is a host-GCC `-fsyntax-only`.
-  pdflatex works there (checked 2026-10-18), and so does PowerPoint, which is also used to render
+  pdflatex works there (checked 2026-10-18; /skl_glb_tex2Word needed
+  `python -m pip install pypandoc_binary` there, done 2026-10-19), and so does PowerPoint, which is also used to render
   slides for checking.
 - **Last year's folder** `C:\Users\yohai\OneDrive - Technion\Bucher Izhak's files - Shared_2025\`:
   **READ-ONLY, ALWAYS**, same rule as above (see §4.6a).
@@ -68,7 +69,7 @@ Course-specific technical conclusions belong here or in a document in this folde
 - **A1's `.ioc` is provided, not built by students** (agreed with Bucher, 2026-10-15): `ass1/ass1.ioc`,
   generated from the hardware-test `.ioc` with only A1's items (GPIO LD2/B1/IR_SENSOR, LPUART1,
   I2C1, EXTI15_10). Checked 2026-10-15: CubeMX 6.18 headless generates it, and it builds with
-  `io_board.c`, 0 warnings. Tutorial 5 (first tutorial after A1 is due) teaches creating a `.ioc`.
+  `io_board.c`, 0 warnings. Tutorial 6 teaches creating a `.ioc` (moved from tutorial 5 on 2026-10-19; tutorial 5 is now I2C).
   For A2, students duplicate `ass1.ioc` (CubeMX *Save Project As* → `ass2/ass2.ioc`) and add only
   the new items. **No `ass2.ioc` is ever given to students** (Yohai, 2026-10-17): they get only the
   pinout and settings, as the "Assignment 2: project configuration" section of the A2 instructions.
@@ -126,7 +127,7 @@ creativity bonus). Dates go on Moodle.
 **Agreed with Bucher (2026-10-08):** **3 assignments + 2 quizzes**, replacing the 4 labs above.
 A1 "No wheels" (NUCLEO + IO board: types, wrap-around, bit ops, logic, blinking, RGB). A2 "Wheels in
 the air" (motors on the block). A3 "Wheels on the ground". **Weights: Quiz 1 10%, Quiz 2 10%,
-A1 20%, A2 25%, A3 35%.** Each quiz takes the **first hour of a lecture**: Quiz 1 in lecture 4
+A1 20%, A2 30%, A3 30%.** (A2/A3 changed from 25/35 by Yohai, 2026-10-19.) Each quiz takes the **first hour of a lecture**: Quiz 1 in lecture 4
 (23.11.2026), Quiz 2 in lecture 9 (28.12.2026; moved from lecture 8 on 2026-10-17). Yohai will probably
 write the quizzes.
 
@@ -135,7 +136,7 @@ due session 10 (4.1.2027) (both moved one week later). **"Last material included
 assignment may require material taught up to and including the lecture one week after it is out
 (A1: session 3, A2: session 8), nothing later. Shown in bold in the plan's milestone column.
 
-**Work order and roles (agreed 2026-10-08):** the current main focus is **writing Assignment 1**.
+**Work order and roles (agreed 2026-10-08):** the first focus was **writing Assignment 1** (done; A2 and A3 drafted by 2026-10-19).
 Bucher derives the first lectures' content from it. After that: A2 and A3; Bucher writes the
 lectures, Yohai the tutorials and (probably) the quizzes.
 
@@ -239,7 +240,7 @@ CLAUDE.md                      auto-loaded pointer to this file
 MP2026_plan.tex                13-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 and A2 detailed, A3 drafted 2026-10-19)
                                (the .tex goes in git, not the PDF)
 MP2026_plan.docx               Word copy of the plan for Bucher, made with /skl_glb_tex2Word (in git).
-                               Regenerate it after plan edits before sending it to him
+                               Regenerate it ONLY when Yohai asks for it specifically (see CLAUDE.md)
 ass1/                          files handed to A1 students: ass1.ioc (the project configuration),
                                io_board.h, io_board.c (copied
                                unmodified from Bucher's Lesson 3 package). The ultrasonic sensor is
@@ -279,12 +280,16 @@ tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section pe
                                needs PSC + 1 = 0.17). Slides 16 to 18: each example is titled only
                                by f_PWM and N; M, PSC, ARR and the rest are table rows; the boxes
                                below tell each example as a step-by-step story with numbers. The "two timers"
-                               example slide was deleted), tutorial 6 (slides 25 to 29, moved
-                               there from tutorial 4 by Yohai on 2026-10-19: fast vs slow outputs,
-                               blocking, the logic/store/transport layers, the super loop), tutorial 5
-                               (creating a .ioc in CubeMX: flow, rebuilding ass1.ioc in two
-                               tables, duplicating it for A2; now slides 20 to 23, added in place
-                               2026-10-15 by duplicating slides 9 and 16). Once Yohai edits
+                               example slide was deleted), tutorial 5 = I2C (only its title
+                               slide 19, 2026-10-19), tutorial 6 = ".ioc file and SR04 reading"
+                               (Yohai, 2026-10-19; topics in this order: the .ioc file, SR04
+                               reading, and last the self-learning part, blocking vs non-blocking).
+                               Slides: 20 title; 21 to 24 creating a .ioc in CubeMX (flow,
+                               rebuilding ass1.ioc in two tables, duplicating it for A2; added
+                               2026-10-15 in tutorial 5, moved here 2026-10-19); no SR04 slides
+                               yet; 25 to 29 self-learning (fast vs slow outputs, blocking, the
+                               logic/store/transport layers, the super loop; moved from tutorial
+                               4 on 2026-10-19). Once Yohai edits
                                it in PowerPoint, never regenerate it: add slides in place
 
 general/rolling doc MP course.docx   Yohai's running list of understanding questions
@@ -327,7 +332,7 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
   file is only picked up after CubeIDE regenerates it (Yohai builds once in the IDE). Building is
   fine; **flashing the board is not**, unless Yohai explicitly asks.
 - **Deliverables for Bucher** are prepared here; Yohai moves them to the shared folder himself.
-- **Word copies for Bucher:** `/skl_glb_tex2Word MP2026_plan.tex --overwrite` (real tables, red/blue
+- **Word copies for Bucher** (only when Yohai asks): `/skl_glb_tex2Word MP2026_plan.tex --overwrite` (real tables, red/blue
   notes kept as the Word styles "Color red"/"Color blue"). It reports TABLES and LEAKS; both must be clean.
 - **Scripted edits of the .tex:** never put backslashes inside a bash heredoc (the shell tool mangles
   `\\`, which once spliced the plan at the wrong "Part B" and duplicated half of it, 2026-10-18).
@@ -393,6 +398,10 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
    Also: lectures 8 and 9 (PI control; UART and MATLAB GUI) no longer match tutorials 8 and 9
    (encoders; control workflow) since 2026-10-19, and no tutorial covers the UART parser or the
    MATLAB GUI any more. A3 flags: the obstacles and the course, and the bonus weight.
+   Also changed by Yohai on 2026-10-19, to tell Bucher: A2/A3 weights 25/35 → 30/30; tutorial 5 is
+   now I2C and the .ioc tutorial moved to tutorial 6 (with SR04 reading, then self-learning: blocking
+   vs non-blocking). The "EXTI interrupt with a counter" left tutorial 6, so no tutorial covers EXTI
+   before A2 Part B.
 7. 🔴 **The motor winding's electrical time constant L/R** (red flag in A2 A.2(b), for Bucher): we
    assume about 1 ms, which would explain why a 100 Hz PWM is loud.
 8. 🔴 **Measure t_ISR on the board** (Debug build). Tutorial 4's slide 17 and the A2 Part A
@@ -402,6 +411,9 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
    PSC 0 the counter moves about 170 counts per loop pass, so `% 100` is sampled almost at random:
    the LED's average brightness is right, but it isn't a clean PWM. Its comment "48.47 times per
    second" matches nothing. Ask Bucher which TIM2 settings he used before anyone reuses it.
+10. **A3 encoder mode.** A3's `ass3.ioc` is a copy of `ass2.ioc`, but A2 D.1 has students switch
+   TIM1 between Encoder Mode TI1 and TI1 and TI2, so TIM1 may end in either mode while TIM3/4/8 stay
+   in TI1. A3 should state one mode for all four wheels (TI1 and TI2 gives ×4 resolution).
 
 ## 7. Plan rationale and notes (kept out of MP2026_plan.tex)
 
