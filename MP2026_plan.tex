@@ -36,7 +36,7 @@
     precedence, shifts and masks, pointers, structs, registers as pointers.
   & Numbers and bits on the board: predict-then-run wrap-around, signed/unsigned in the debugger, binary printer, the
     four bit idioms (set/clear/toggle/test).
-  & A1 out \\
+  & A1 out: variables and wrap, bit operations, trigerring, timing, IR sensor logics \\
 \addlinespace
 3 & 16.11.2026 & \textcolor{blue}{The IO board as a black box: RGB LEDs (3 chips $\times$ 8 channels), colour mixing,
     gamma, patterns as data;} buttons (active-low byte), edge detection, debouncing; ``Catch the Dot''. Timers and
@@ -52,8 +52,8 @@
     vector table, the HAL chain (\texttt{IRQHandler} $\to$ \texttt{HAL\_TIM\_IRQHandler} $\to$ callback), the cost of
     entering and leaving an interrupt, keeping ISRs short (no blocking calls, no \texttt{HAL\_Delay}), variables shared
     with the main loop.
-  & Multi-rate blink from a timer interrupt (no \texttt{HAL\_Delay}); state-machine skeleton (\texttt{enum} +
-    \texttt{switch}).
+  & PWM, three methods: polling (\texttt{HAL\_GetTick} in the main loop), interrupt (TIM7 callback) and hardware
+    (timer CCR); what each must fit in time; the ISR and the HAL callback chain.
   & Quiz 1 (first hour) \\
 \addlinespace
 5 & 30.11.2026 & The I2C bus opened: protocol, addressing, ACK/NACK, pull-ups; HAL I2C; register-level drivers for PCA9634,
@@ -65,34 +65,37 @@
 \addlinespace
 6 & 7.12.2026 & PWM and input capture: duty cycle, H-bridge preview; SR04 trigger/echo by input capture; EXTI on the
     optical sensor (edge triggering revisited).
-  & SR04 single distance measurement; EXTI interrupt with a counter; PWM on one motor channel.
+  & Blocking vs.\ non-blocking: writing a register inside the STM32 (one store, nanoseconds) vs.\ a register on
+    another chip over I2C (about 0.3\,ms); updating the 24 LED registers one per loop pass; the decide, store and
+    transport layers and the super loop. SR04 single distance measurement; EXTI interrupt with a counter.
   & \\
 \addlinespace
 7 & 14.12.2026 & DC motors and encoders: H-bridge drive, quadrature decoding (encoder timer mode), speed measurement, recording
     a step response at a fixed rate.
-  & One wheel in the air: open-loop PWM, encoder to rad/s, record and export to MATLAB.
-  & A2 out \\
+  & One wheel in the air: open-loop PWM, encoder to rad/s, record and export to MATLAB. Fit a model.
+  & A2 out: PWM, polling and interups (sensors), I2C, encoders, step response to Matlab  \\
 \addlinespace
 8 & 21.12.2026 & PI speed control: model fitting (V $\to$ rad/s), design, discretisation and sample rate, PI inside a 100\,Hz
     interrupt, saturation and anti-windup, STM32CubeMonitor.
-  & Control workflow: fit, \texttt{sisotool}, \texttt{c2d}, implement the difference equation in C,
-    compare simulated vs.\ measured step.
+  & Different encoder configurations.
   & \textbf{Last material included in A2} \\
 \addlinespace
 9 & 28.12.2026 & UART command protocol: interrupt-driven receive, command interpreter, ASCII vs.\ binary framing; MATLAB
     \texttt{serialport} and an App Designer GUI.
-  & UART command parser; minimal MATLAB GUI that sends commands and plots telemetry.
+  & Control workflow: fit, \texttt{sisotool}, \texttt{c2d}, implement the difference equation in C,
+    compare simulated vs.\ measured step.
   & Quiz 2 (first hour) \\
 \addlinespace
 10 & 4.1.2027 & Mecanum kinematics: inverse and forward kinematics, odometry; trajectory generation (trapezoidal profiles, waypoints,
      piecewise-constant $(v_x,v_y,\omega)$ with output-compare timing).
-   & Kinematics exercises; driving the cart on the floor; a trajectory array generated in MATLAB and sent to the cart.
+   & Kinematics (straight lines) and state machine: wheel speeds for driving in straight lines; a state machine
+     (\texttt{enum} + \texttt{switch}) for a driving sequence.
    & A2 due \\
 \addlinespace
 11 & 11.1.2027 & Simulink to C: discrete blocks and sample rates, exporting a controller or filter, integrating it in CubeIDE;
      digital filters (median, IIR).
    & Export a Simulink PI/filter to C and run it on the cart.
-   & A3 out \\
+   & A3 out: Controller design, obstacle avoiding, state machine \\
 \addlinespace
 12 & 18.1.2027 & System integration and case studies: scanned sonar map, obstacle response, wrap-up; final hints for A3.
    & Open project clinic.
@@ -119,7 +122,8 @@ Quiz 2 & Sessions 4 to 8: timers and interrupts, state machines, I2C, PWM and in
 Assignment 1 & Variable types, wrap-around, bit operations and shifting, logic, LED blinking, RGB LEDs & 20\% \\
 Assignment 2 & Software and hardware PWM, interrupts (EXTI, input capture), I2C drivers, encoders and speed,
   step response (wheels in the air) & 25\% \\
-Assignment 3 & Driving on the ground, ultrasonic sensing, MATLAB GUI, Simulink to C & 35\% \\
+Assignment 3 & PI speed control from the fitted model, driving in straight lines, obstacle avoidance with the IR and
+  ultrasonic sensors, a state machine; bonus: return to the start & 35\% \\
 \bottomrule
 \end{tabularx}
 
@@ -364,54 +368,44 @@ wrap-around, and record a step response at a fixed rate for analysis in MATLAB.
 set every PWM duty to 0 at start-up.
 
 \paragraph{Part A: Three ways to make a PWM.}
-A PWM signal is on for $M$ ticks out of every $N$ ticks: the PWM frequency is $1/(N \cdot T)$, where $T$ is the tick,
-and the duty is $M/N$. A hardware timer has the same three parameters: the prescaler PSC sets the tick, ARR sets the
-period ($N = \mathrm{ARR}+1$) and CCR sets the on-time ($M = \mathrm{CCR}$). In this part you build the same PWM in
-three ways and find the limits of each. $N$ and $M$ are global variables that you change from Live Expressions while
-the program runs.
+Build the same PWM with the three methods of tutorial~4 (polling, interrupt, hardware), with its symbols $N$, $M$,
+$t_\mathrm{step}$ and $f_\mathrm{PWM}$, and find the limits of each. $N$ and $M$ are global variables that you change
+from Live Expressions while the program runs.
 
 \smallskip\noindent
 \textbf{Hint:} keep two human limits in mind. The eye stops seeing a light flicker above roughly 50 to 100\,Hz, and the
 ear hears from about 20\,Hz to 20\,kHz. They decide which PWM frequency is good enough for an LED and for a motor.
 \begin{enumerate}[label=A.\arabic*, leftmargin=2.2em]
-  \item Method 1: software PWM timed by \texttt{HAL\_GetTick}, on LD2. \emph{This task demonstrates a method that is
-        not good enough, and why.} The tick is fixed at $T = 1$\,ms (the software ``prescaler'' cannot be changed). In
-        the main loop, keep LD2 on for the first $M$ ticks of every period of $N$ ticks, and off for the rest.
+  \item Method 1, polling, on LD2, with \texttt{HAL\_GetTick} as the step counter ($t_\mathrm{step} = 1$\,ms).
+        \emph{This task demonstrates a method that is not good enough, and why.}
         \begin{enumerate}[label=(\alph*)]
-          \item With $N = 100$ (101 duty levels), sweep $M$ from 0 to 100. What PWM frequency do you get, and what
-                do you see?
-          \item Use $M = N/2$ and reduce $N$ until the flickering disappears. Note $N$, the PWM frequency and the
-                number of duty levels that are left. Explain the phenomenon you see and the trade-off you had to make.
+          \item With $N = 100$, sweep $M$ from 0 to 100. What $f_\mathrm{PWM}$ do you get, and what do you see?
+          \item Use $M = N/2$ and reduce $N$ until the flickering disappears. Note $N$, $f_\mathrm{PWM}$ and the
+                number of duty levels that are left. Explain what you see and the trade-off you had to make.
           \item Calculate the $N$ needed for the 17\,kHz PWM that TIM2 uses for the motors, and explain why it cannot
-                be done with a 1\,ms tick.
+                be done with \texttt{HAL\_GetTick}.
         \end{enumerate}
-        In your report, give a table that maps $T$, $N$ and $M$ to PSC, ARR and CCR, with the formulas for the
-        frequency and the duty.
-  \item Method 2: software PWM in a timer interrupt. TIM7 interrupts at 10\,kHz ($T = 100\,\mu$s, see the
-        configuration section). In its callback, count ticks and switch the output on and off with the same $N$ and
-        $M$ as in A.1.
+  \item Method 2, interrupt, with TIM7 at 10\,kHz ($t_\mathrm{step} = 100\,\mu$s, see the configuration section) and
+        the same $N$ and $M$ as in A.1.
         \begin{enumerate}[label=(\alph*)]
-          \item On LD2, with $N = 100$: what PWM frequency do you get now, and does the LED flicker?
+          \item On LD2, with $N = 100$: what $f_\mathrm{PWM}$ do you get now, and does the LED flicker?
           \item On wheel~1: in the callback, write 0 or 10\,000 to \texttt{TIM2->CCR1} (fully off or fully on). Try
                 $N = 100$ and $N = 10$ at 50\,\% duty, and describe the motion and the sound of the wheel.
                 \flag{For Bucher, delete before publishing: what is the electrical time constant $L/R$ of the cart's
                 motor windings? Can we write that it is about 1\,ms? Then at 100\,Hz (5\,ms on, 5\,ms off) the PWM is not
                 fast enough compared with it: the current rises and falls fully in every period, the torque comes in
                 pulses, and the motor is very loud.}
-          \item Try to make the motors' PWM with method~2: 17\,kHz with 100 duty levels. Which settings must change in
-                TIM7 (PSC, ARR) and in your software ($N$, $M$)? The CPU runs at 170\,MHz, so one CPU cycle lasts
-                $1/f_\mathrm{CPU} \approx 6$\,ns. How long is one tick now, and how many CPU cycles fit in it? Entering
-                and leaving an interrupt alone takes a few tens of cycles. Would it work, and why? Try it, and print the
-                number of main-loop passes per second at 10\,kHz and at the new rate.
+          \item Try to make the motors' PWM with method~2: 17\,kHz with $N = 100$. Which TIM7 settings (PSC, ARR) does
+                it need, and would it work? Try it, and print the number of main-loop passes per second at 10\,kHz and
+                at the new rate.
           \item Measure how long one update of an RGB LED takes over I2C (time 1000 calls of \texttt{setLedChannel}
                 with \texttt{HAL\_GetTick}). Explain why method~2 cannot drive the RGB LEDs from the TIM7 callback.
         \end{enumerate}
-  \item Method 3: hardware PWM. The timer compares its counter with CCR on every clock and drives the pin itself, so
-        no code runs while the PWM is on. On the wheel, set the duty with \texttt{TIM2->CCR1} (TIM2 runs at 17\,kHz
-        with 10\,000 levels). Sweep the duty from 0 to 100\,\% in steps of 5\,\% and find the smallest duty at which
-        the wheel starts to turn. On the RGB LEDs, set the brightness of LED~0 once with \texttt{setLedChannel}: the
-        PCA9634 chip has its own hardware PWM. Count the main-loop passes per second again.
-  \item Compare the three methods in a table: tick, PWM frequency, number of duty levels, main-loop passes per second,
+  \item Method 3, hardware, on wheel~1: TIM2 runs at 17\,kHz with $N = 10\,000$, and \texttt{TIM2->CCR1} sets $M$.
+        Sweep the duty from 0 to 100\,\% in steps of 5\,\% and find the smallest duty at which the wheel starts to
+        turn. On the RGB LEDs, set the brightness of LED~0 once with \texttt{setLedChannel} (the PCA9634 chip has its
+        own hardware PWM). Count the main-loop passes per second again.
+  \item Compare the three methods in a table: $t_\mathrm{step}$, $f_\mathrm{PWM}$, $N$ (duty levels), main-loop passes per second,
         and what you see and hear, on LD2, on the RGB LED and on the wheel. Explain which method suits an LED and which
         a motor, and why.
 \end{enumerate}
@@ -592,7 +586,59 @@ Address (7-bit) & Chip & Role \\
 \end{tabularx}
 
 \subsection{Assignment 3: ``Wheels on the ground''}
-To be defined.
+
+\textbf{Window:} out at session~11, due on 3.3.2027. The assignment may use everything taught up to and including
+session~12.\quad
+\textbf{Hardware:} the cart \textbf{on the floor}, battery and motor power on, the IR sensor, the ultrasonic sensor on
+its servo, and three obstacles.\quad
+\textbf{Project:} \texttt{ass3.ioc}, a copy of your \texttt{ass2.ioc} (\emph{File $\to$ Save Project As}, as in
+Assignment~2). No new pins or peripherals are needed.
+\flag{Bucher and Yohai: the obstacles (size, material that the ultrasonic sensor sees well, spacing along the path),
+the length of the course and the floor area in Room 26.}
+
+\medskip\noindent
+\textbf{Learning outcome.} Students design a PI speed controller from their own plant model and run it on the
+cart; they drive the cart in straight lines from the wheel kinematics; they combine two sensors with different strengths
+into one decision and justify the strategy; they structure a driving task as a state machine.
+
+\medskip\noindent
+\textbf{Safety.} Test at low speed first. B1 must stop all four wheels at any moment, in every state of your program.
+Keep the cart inside the test area and catch it if it drives towards people or furniture.
+
+\paragraph{Part A: PI speed controller.}
+\begin{enumerate}[label=A.\arabic*, leftmargin=2.2em]
+  \item Start from the first-order model you fitted in Assignment~2, Part~E ($K$, $\tau$). Choose a requirement for
+        the closed loop (for example a settling time and the largest overshoot you accept), design a PI controller for
+        the wheel speed that meets it, and give $K_p$ and $K_i$. Explain your choice.
+  \item Discretise the controller for the 100\,Hz interrupt of TIM6 and implement it in C, for all four wheels. Limit
+        the duty to its allowed range, and prevent integrator windup while the duty is saturated.
+  \item With the wheels in the air, step the speed setpoint of wheel~1 and record the response as in Assignment~2,
+        Part~E. In MATLAB, plot the measured and the simulated closed-loop responses on one figure, and explain the
+        differences.
+  \item Repeat A.3 with the cart on the floor, all four wheels at the same setpoint. What changes, and why?
+\end{enumerate}
+
+\paragraph{Part B: Obstacle course.}
+The cart drives forward along a straight line under the speed control of Part~A. When it detects an obstacle ahead, it
+gets as close to it as it can without touching it, and stops. It bypasses the first obstacle from the right, as close
+to the obstacle as it can, and comes back to the original line. It bypasses the next obstacle from the left, and the
+third from the right again, each time returning to the original line and driving on.
+\begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
+  \item Use \textbf{both} sensors, the IR sensor and the ultrasonic sensor. Explain your strategy in the report: which
+        sensor detects the obstacle, which one decides how close you get, what you do when they disagree, and how you
+        handle false or missing readings. Support it with measurements of each sensor's range and reliability.
+  \item Write the program as a state machine (\texttt{enum} + \texttt{switch}). Include the state diagram in the
+        report, with the condition for every transition.
+  \item Use the encoders to measure how far the cart has moved. In the report, give the closest distance to each
+        obstacle and the sideways distance from the original line after each bypass.
+\end{enumerate}
+Show the whole course, all three obstacles, in the video.
+
+\paragraph{Part C (bonus): Back to the start.}
+After the third obstacle, the cart returns to its starting point. Learn by yourself how to pivot the cart (turn it in
+place), and then drive back in straight lines. Report how far from the starting point the cart stopped, and explain
+where the error comes from.
+\flag{Bucher and Yohai: the weight of the bonus, and whether the obstacles stay on the course for the way back.}
 
 \subsection{Quizzes}
 Two quizzes, each 10\% of the final grade, held in the first hour of the lecture: Quiz 1 in session 4 (23.11.2026), Quiz 2 in session 9 (28.12.2026).

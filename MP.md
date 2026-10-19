@@ -43,7 +43,8 @@ the course is settled, update this file in the same session.
 - Built files stay out of git (`Debug/`, `Release/`, `*.elf`, Office lock files `~$*`). See
   `.gitignore`.
 - Office files open in PowerPoint/Word are locked and can't be read. If a read fails, say which
-  file and ask Yohai to close it. Don't silently skip it.
+  file and ask Yohai to close it. Don't silently skip it. Word can hold a file locked after its
+  window is closed: if a write is refused, ask Yohai to quit Word completely.
 - **Never drive real hardware** (flash a board, run motors) on my own. Building and static analysis
   are fine. Anything that runs on the cart, Yohai does or approves.
 
@@ -150,7 +151,13 @@ interesting", so give it less weight. **A2 drafted 2026-10-17** from Yohai's out
 (HAL_GetTick 1 ms software PWM as a demo of its limit; software PWM in a 10 kHz TIM7 interrupt and its
 CPU cost; hardware PWM: TIM2 CCR and the PCA9634's own PWM), B polling vs. interrupts (IR + ultrasonic stop a
 wheel), C own I2C driver, D encoder resolution (TI1 vs. TI1 and TI2) and wrap-safe speed, E step
-response to MATLAB. PI control is no longer in A2 (likely A3). A3 contents: don't design until asked.
+response to MATLAB. PI control is no longer in A2. **A3 drafted 2026-10-19** from Yohai's outline: A PI speed
+controller from the A2 Part E model (design, 100 Hz C code with anti-windup, air vs. floor); B obstacle
+course (stop as close as possible, bypass right, left, right and return to the line, BOTH sensors with
+the strategy explained, a state machine, encoder distances); C bonus: pivot and return to the start in
+straight lines. Tutorial changes the same day: 8 = encoder configurations, 9 = control workflow (was
+8), 10 = kinematics (straight lines) and state machine; the UART parser and MATLAB GUI tutorial
+was dropped.
 
 ### 4.3 Meeting plan (syllabus)
 
@@ -229,7 +236,7 @@ new_pcb_demo.zip, test_pcb2a.zip
 ```
 MP.md                          this file
 CLAUDE.md                      auto-loaded pointer to this file
-MP2026_plan.tex                13-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 and A2 detailed)
+MP2026_plan.tex                13-session plan (lecture ↔ tutorial, dates) + assignment proposals (A1 and A2 detailed, A3 drafted 2026-10-19)
                                (the .tex goes in git, not the PDF)
 MP2026_plan.docx               Word copy of the plan for Bucher, made with /skl_glb_tex2Word (in git).
                                Regenerate it after plan edits before sending it to him
@@ -253,15 +260,30 @@ ass1/solution/                 TA-ONLY, never handed to students. checkBounce/ =
 tutorials/MP_tutorials_2026.pptx    all 12 tutorials in one deck, one section per tutorial (may be
                                split into 12 PDFs for students later). Built from a pptxgenjs
                                script (scratchpad). Content so far: tutorial 1 (USER CODE
-                               sections), tutorial 4 (slides 13 to 16, added 2026-10-18 with
-                               python-pptx: timer-to-callback flow chart + formulas; timing
-                               definitions t_clk, t_tick, T_period, t_ISR, t_free with the rule
-                               t_ISR < T_period (works/fails cases); worked example TIM7
-                               100 us / TIM6 1 s; the ISR
-                               definition and HAL callback chain; then fast vs slow outputs, blocking, the
-                               logic/store/transport layers, the super loop), tutorial 5
+                               sections), tutorial 4 (slides 13 to 18, added 2026-10-18 with
+                               python-pptx, in this order: 13 timer-to-callback flow chart +
+                               formulas; 14 the ISR definition and HAL callback chain (code);
+                               15 three ways to make a PWM, opening with the definitions (a step
+                               counter 0 to N - 1, on while below M; T_PWM = N · t_step,
+                               f_PWM = 1 / T_PWM, duty = M / N): polling (HAL_GetTick in the main
+                               loop), interrupt (TIM7 callback), hardware (TIM2 CCR), the same
+                               names as A2 Part A; 16 polling timing: t_step, t_loop, rule
+                               t_loop much shorter than t_step (working: only the PWM lines;
+                               not working: a 22-character printf, 1.9 ms; both N = 10, M = 5,
+                               100 Hz); 17 interrupt
+                               timing: t_clk, t_tick, T_period, t_ISR, t_free, rule
+                               t_ISR < T_period (0.07 us = 12 entry cycles; working 1 kHz, not working 20 kHz,
+                               both N = 100);
+                               18 hardware: the limit f_PWM · N <= f_clk (working: the wheels,
+                               TIM2 17 kHz, N = 10 000; not working: 100 kHz with the same N, which
+                               needs PSC + 1 = 0.17). Slides 16 to 18: each example is titled only
+                               by f_PWM and N; M, PSC, ARR and the rest are table rows; the boxes
+                               below tell each example as a step-by-step story with numbers. The "two timers"
+                               example slide was deleted), tutorial 6 (slides 25 to 29, moved
+                               there from tutorial 4 by Yohai on 2026-10-19: fast vs slow outputs,
+                               blocking, the logic/store/transport layers, the super loop), tutorial 5
                                (creating a .ioc in CubeMX: flow, rebuilding ass1.ioc in two
-                               tables, duplicating it for A2; now slides 23 to 26, added in place
+                               tables, duplicating it for A2; now slides 20 to 23, added in place
                                2026-10-15 by duplicating slides 9 and 16). Once Yohai edits
                                it in PowerPoint, never regenerate it: add slides in place
 
@@ -317,12 +339,19 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
 - **Timing vocabulary** (Yohai, 2026-10-18): explain timing in time [s], not frequency. Terms:
   t_clk = 1/f_clk, t_tick = (PSC+1)·t_clk, T_period = (ARR+1)·t_tick, t_ISR (one pass through the
   interrupt), t_free = T_period − t_ISR. Rule: t_ISR < T_period, with a margin (rule of thumb
-  about 10 %). The term **ISR** is used: taught in lecture 4 and on tutorial 4's slides 13 to 16.
-  In A2's software PWM, "tick" means one TIM7 period; say so wherever both meanings could meet.
+  about 10 %). The term **ISR** is used: taught in lecture 4 and on tutorial 4's slides 13 to 18.
+  **PWM vocabulary** (2026-10-19, slides 15 to 18 and A2 Part A): a step counter runs 0 to N − 1;
+  the output is on while it is below M; t_step = one step, T_PWM = N · t_step, f_PWM = 1 / T_PWM,
+  duty = M / N. The three methods are named **polling** (`HAL_GetTick` in the main loop, not
+  `TIM->CNT`), **interrupt** (TIM7 callback, t_step = T_period) and **hardware** (timer CCR,
+  N = ARR + 1, M = CCR). "Tick" stays the timer count, t_tick.
 - **Editing the tutorials deck:** insert slides in place with a python-pptx script kept in the
   scratchpad. Back up the deck first, and add each new slide to its tutorial's section. The deck
   must be closed in PowerPoint, or the save is refused. Check by rendering through PowerPoint COM
-  (`Presentations.Open` on a copy, then `Slides(i).Export(...png)`).
+  (`Presentations.Open` on a copy, then `Slides(i).Export(...png)`). python-pptx names a new slide
+  by the slide count, so add new slides **before** deleting any in the same script, or two parts
+  get the same name. For COM rendering pass Windows paths (backslashes) and the slide index as
+  `[int]`.
 
 ## 6. Open questions for Yohai
 
@@ -360,11 +389,19 @@ debug_011026/                  scratch project for the 2026-10-01 ST-LINK debugg
    MODE1 auto-increment bits are, I believe, read-only and set through the control byte. Check the
    datasheet before A2 C.3 (one transaction vs. many) is published; if confirmed, tell Bucher.
 6. Agree with Bucher: Quiz 2 moved to lecture 9 and now covers sessions 4 to 8 (my assumption), and
-   PI speed control is no longer in A2 (Yohai's outline, 2026-10-17). It probably goes to A3.
+   PI speed control is no longer in A2 (Yohai's outline, 2026-10-17); it is A3 Part A.
+   Also: lectures 8 and 9 (PI control; UART and MATLAB GUI) no longer match tutorials 8 and 9
+   (encoders; control workflow) since 2026-10-19, and no tutorial covers the UART parser or the
+   MATLAB GUI any more. A3 flags: the obstacles and the course, and the bonus weight.
 7. 🔴 **The motor winding's electrical time constant L/R** (red flag in A2 A.2(b), for Bucher): we
    assume about 1 ms, which would explain why a 100 Hz PWM is loud.
-8. 🔴 **Measure t_ISR on the board** (Debug build). Tutorial 4's slides 14 and 15 and the A2 Part A
-   answers assume about 1 µs (170 cycles).
+8. 🔴 **Measure t_ISR on the board** (Debug build). Tutorial 4's slide 17 and the A2 Part A
+   answers assume about 1 µs (170 cycles). Slide 16 likewise assumes a bare polling loop
+   (HAL_GetTick, compare, HAL_GPIO_WritePin) takes about 1 µs per pass: measure that too.
+9. **Bucher's 2025 polling-PWM code** (main loop: `pwm = (TIM2->CNT % 100) < x`). With TIM2 at
+   PSC 0 the counter moves about 170 counts per loop pass, so `% 100` is sampled almost at random:
+   the LED's average brightness is right, but it isn't a clean PWM. Its comment "48.47 times per
+   second" matches nothing. Ask Bucher which TIM2 settings he used before anyone reuses it.
 
 ## 7. Plan rationale and notes (kept out of MP2026_plan.tex)
 
