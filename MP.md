@@ -52,7 +52,7 @@ the course is settled, update this file in the same session.
 ## 3. The scope of my help
 
 1. **Understanding questions.** Yohai is learning STM32/embedded C. His running question list is
-   `general/rolling doc MP course.docx` (questions keyed to lesson + slide, e.g. "Les2 s17").
+   `others/rolling doc MP course.docx` (questions keyed to lesson + slide, e.g. "Les2 s17").
 2. **Tutorials.** Help build the 1 h tutorials that accompany each lecture.
 3. **Assignments.** Write **one unified assignments document** covering all labs. Bucher's lessons
    mention assignments piecemeal; the unified doc is ours. Then **solve** the assignments (reference
@@ -77,11 +77,16 @@ Course-specific technical conclusions belong here or in a document in this folde
 - **Pin/peripheral configuration for students: a "project configuration (.ioc)" section at the end
   of each assignment** in `MP2026_plan.tex` (Yohai, 2026-10-11; replaced the separate
   `ass_*_ioc.tex` files, now deleted). For A1 it's a reference list of what `ass1.ioc` contains.
+  **A1 exception (Yohai, 2026-10-26):** A1's full configuration section was replaced by one friendly table near
+  the top, "The hardware you use, and how to reach it from your code" (what / where / the call or macro:
+  LD2_Pin, IR_SENSOR_Pin, io_board functions, PuTTY settings), plus the power-jumper note. Clock, SWD pins, NVIC and
+  the I2C addresses were dropped from A1 (students get `ass1.ioc` and never change it); the full I2C device table
+  (all 5 chips) now lives in A2's configuration section, where the bus is opened.
   Each lists only what that assignment needs, so students
   aren't confused, and they're **cumulative**: A2's contains everything in A1's, even where A2
   doesn't use it. A3 may share A2's or get its own. Unconfirmed hardware stays out of them (open
   items in §6). All values come from the working hardware-test project
-  (`hardwaret_test/align_servo.ioc` + `main.c`).
+  (`stmProjects/hardwaret_test/align_servo.ioc` + `main.c`).
 - **CubeIDE 2.x has no built-in CubeMX.** Double-clicking a `.ioc` opens the separate STM32CubeMX
   (installed at `%LOCALAPPDATA%\Programs\STM32CubeMX`). Projects come into CubeIDE through
   *File → Import → STM32CubeMX/STM32CubeIDE Project*. Students need both programs. To check a
@@ -149,11 +154,16 @@ creativity bonus). Dates go on Moodle.
 A1 "No wheels" (NUCLEO + IO board: types, wrap-around, bit ops, logic, blinking, RGB). A2 "Wheels in
 the air" (motors on the block). A3 "Wheels on the ground". **Weights: Quiz 1 10%, Quiz 2 10%,
 A1 20%, A2 30%, A3 30%.** (A2/A3 changed from 25/35 by Yohai, 2026-10-19.) Each quiz takes the **first hour of a lecture**: Quiz 1 in lecture 4
-(23.11.2026), Quiz 2 in lecture 9 (28.12.2026; moved from lecture 8 on 2026-10-17). Yohai will probably
+(24.11.2026), Quiz 2 in lecture 9 (29.12.2026; moved from lecture 8 on 2026-10-17). Yohai will probably
 write the quizzes.
 
-**Schedule as of 2026-10-17 (Yohai):** A1 out session 2, due session 5. A2 out session 7 (14.12),
-due session 10 (4.1.2027) (both moved one week later). **"Last material included" rule:** an
+**A1 revisions (Yohai, 2026-10-26):** videos only for Parts A, B and E (`V_A12`, `V_B1234`, `V_E`); C and D
+have no video on purpose. C.1 shows the count on button release. D.1 is timed with HAL_GetTick. D.3 = RGB LEDs 0
+and 1 at 1 and 1.3 Hz, 10 blinks timed per LED, compared with the calculation. Part D runs as one program chosen in
+Live Expressions, and the report says how to operate it.
+
+**Schedule as of 2026-10-17 (Yohai):** A1 out session 2, due session 5. A2 out session 7 (15.12),
+due session 10 (5.1.2027) (both moved one week later). **"Last material included" rule:** an
 assignment may require material taught up to and including the lecture one week after it is out
 (A1: session 3, A2: session 8), nothing later. Shown in bold in the plan's milestone column.
 
@@ -162,9 +172,9 @@ Bucher derives the first lectures' content from it. After that: A2 and A3; Buche
 lectures, Yohai the tutorials and (probably) the quizzes.
 
 The working plan is `MP2026_plan.tex`
-(13 sessions, lecture n ↔ tutorial n). **It is the reference for which tutorial matches which lesson.** Lectures are on
-**Mondays, from 2.11.2026**: 12 lecture+tutorial sessions → 18.1.2027, plus session 13 (25.1.2027),
-a lab meeting for open questions. Checked against the Technion calendar. A3 is out 11.1.2027 and due
+(13 sessions, lecture n ↔ tutorial n; the first tutorial is not one week after the first lecture, so "one week after the lecture" was removed from the table header, Yohai 2026-10-26). **It is the reference for which tutorial matches which lesson.** Lectures are on
+**Tuesdays, from 3.11.2026** (moved from Mondays by Yohai, 2026-10-26): 12 lecture+tutorial sessions → 19.1.2027, plus session 13 (26.1.2027),
+a lab meeting for open questions. Checked against the Technion calendar. A3 is out 12.1.2027 and due
 **3.3.2027**.
 
 **Assignment emphasis (Yohai, 2026-10-02):** start from the 2025 cart assignments, but shift the
@@ -327,6 +337,19 @@ assignments/ass1/solution/     TA-ONLY, never handed to students. checkBounce/ =
                                debounced 20 ms, C.4 missing presses with HAL_Delay(150) (debounced
                                and edge); LEDs/print only on change. Button only: Yohai decided
                                to keep the IR sensor out of Part C
+                               fullSolution/ (2026-10-26) = the full A1 reference solution.
+                               ass1_sol/ = CubeIDE project (copy of tut1Proj, whose .ioc equals
+                               ass1.ioc; renamed ass1_sol), students' io_board.c/h unchanged, one
+                               file per part (partA.c to partE.c), bits.c (B.1), ass1_common.c,
+                               ass1_tasks.c (dispatcher). Everything runs in one program: the global
+                               `task` chosen in Live Expressions (11 = A.1 ... 51 = E; 34/35 = C.4
+                               debounced/edge, 43/44 = D.3 HAL_Delay/HAL_GetTick). ass1_sol.tex =
+                               TA report: how to run every task in Live Expressions, answers,
+                               expected numbers, grading notes. Syntax-checked with host GCC only;
+                               NOT yet built with the ARM toolchain or run on the board (do it on
+                               the C: PC). Choices in it: E brightens again if the condition
+                               returns while dimming; D.3 deadlines kept in us so 1.3 Hz gives
+                               7692 ms, not 7700
 tutorials/MP_tutorials_2026.pptx    all tutorials in one deck, one section per tutorial; the export
                                skill splits it into Tutorial1.pdf, Tutorial2.pdf, ... Yohai edits it in
                                PowerPoint himself, so slide numbers shift: refer to slides by TITLE.
@@ -417,7 +440,9 @@ stmProjects/hardwaret_test/    CubeIDE project (G474RE; align_servo.ioc; Hardwar
 - **Scripted edits of the .tex:** never put backslashes inside a bash heredoc (the shell tool mangles
   `\\`, which once spliced the plan at the wrong "Part B" and duplicated half of it, 2026-10-18).
   Write the script to a file and build backslashes with `chr(92)`. After any scripted splice, check
-  that each heading appears once and diff against the last commit.
+  that each heading appears once and diff against the last commit. The same happens in a Python heredoc, and in
+  sed a `\l`/`\u` in the replacement is a case operator (a rename `\le{` to `\lv{` turned `\title` into `\titv`,
+  2026-10-26): always use a script file.
 - Planned documents (create when the task starts, not before): `assignments/` (unified assignment
   document + solutions + rubrics), `quiz/`, and a `PROGRESS.md` once there is ongoing
   task state to track.
@@ -466,7 +491,7 @@ stmProjects/hardwaret_test/    CubeIDE project (G474RE; align_servo.ioc; Hardwar
    library", "black-box principle"), and A1 as written depends on it for the RGB LEDs and buttons,
    but Yohai and Bucher haven't agreed it. Yohai's decision (2026-10-22): give a trimmed copy
    (see §4.6); tell Bucher.
-3. (Resolved 2026-10-17: A2 is now due 4.1.2027, one week before A3 goes out on 11.1.2027.)
+3. (Resolved 2026-10-17: A2 is now due 5.1.2027, one week before A3 goes out on 12.1.2027.)
 4. Where does the servo-scanned sonar go: A2, A3 or a bonus? (A2 now uses the sonar alone in Part B
    and the servo alone in C.5; the scanned map is still unplaced.)
 5. 🔴 **`io_board.c` writes PCA9634 MODE1 = 0x20, commented "auto-increment".** On the PCA9634 the
