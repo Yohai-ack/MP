@@ -1,0 +1,267 @@
+BOUNCECHECK400: INSTRUCTIONS AND RESULTS SHEET
+==============================================
+
+Purpose
+~~~~~~~
+Assignment 1, Part C counts presses of I2C button 0 in three ways: level,
+edge, and debounced edge. We want Part C to show two kinds of wrong count:
+
+  1. UNWANTED events: one real press is counted more than once, because the
+     contact bounces (press, release, press within a few ms).
+  2. MISSING events: a real press is not counted at all, because it was
+     shorter than one pass of the main loop.
+
+In checkBounce (I2C at 100 kHz) the buttons bounced rarely: 0 to 4 short gaps
+per 20 presses, and the shortest gap was always 407 us, exactly one I2C read.
+So at 100 kHz the bus may simply be too slow to see most of the bounce. This
+test reads button 0 with the I2C bus at 400 kHz, about 3 to 4 times more
+often, to see whether the bounce becomes clear enough for Part C.
+
+The program watches I2C button 0 only. For every raw edge it counts presses
+and releases separately, measures the gap from the previous edge, and keeps a
+time-stamped log. A debounced count (20 ms) runs alongside as a check of the
+real number of presses. LD2 (green LED on the Nucleo) lights while button 0 is
+held.
+
+Nothing moves: the program never drives the wheels, the RGB LEDs or the servo.
+You need Live Expressions and PuTTY.
+
+Where you fill something in, it looks like this:  [ ______ ]
+Write your value between the brackets. Where a log is asked for, paste the
+PuTTY text between the lines marked "paste here".
+
+
+PART 1: SETUP (once)
+====================
+
+1. Hardware
+   - Cart with the IO board connected, as for checkBounce.
+   - USB cable from the Nucleo to the PC.
+   - Power jumper on the Nucleo: 5V_STLK.
+
+2. Open the project in STM32CubeIDE
+   - File > Import > General > Existing Projects into Workspace > Next.
+   - Select root directory, depending on the PC you work on:
+       C:\Users\yohai\git_codes\STM32\assignments\ass1\solution\bounceCheck400
+     or
+       D:\git_codes\STM32\assignments\ass1\solution\bounceCheck400
+   - Make sure "bounceCheck400" is ticked, and "Copy projects into
+     workspace" is NOT ticked. Finish.
+   - Do NOT open bounceCheck400.ioc and do NOT press Generate Code. The
+     project is ready as it is.
+
+3. PuTTY
+   - Connect to the ST-LINK COM port: 115200 baud, 8 data bits, no parity,
+     1 stop bit (Connection type: Serial).
+   - Window > Lines of scrollback = 5000.
+   - To copy the whole PuTTY text: right-click the PuTTY title bar >
+     "Copy All to Clipboard". Before each round, clear the window with
+     right-click title bar > "Clear Scrollback", so each copy holds one log.
+
+4. Build and start debugging
+   - Select the project, press the hammer (build). Expect 0 errors and
+     0 warnings. (I built it outside the IDE with the same compiler: 0
+     warnings. If the IDE shows errors or warnings, copy them into Part 4.)
+   - Press the bug icon (F11). If asked, choose "STM32 C/C++ Application",
+     then OK. The debugger stops at the start of main().
+   - Press Resume (F8). PuTTY prints:
+       bounceCheck400 running. Write dumpLog = 1 to print the log.
+       I2C now 400 kHz, counts reset.
+
+5. Live Expressions
+   - Window > Show View > Live Expressions.
+   - Add each name below, exactly as written:
+
+     INPUTS (you will write these):
+       resetCounts      write 1: all counts and the log go back to zero
+       i2cFast          1 = I2C at 400 kHz (the start value), 0 = 100 kHz
+       loopDelayMs      0 = read as fast as possible (start value);
+                        any other value = wait that many ms after each read
+       dumpLog          write 1: the log is printed to PuTTY
+       shortGapUs       30000 (30 ms). Leave it.
+       debounceMs       20. Leave it.
+
+     OUTPUTS (you will read these):
+       i2cKHz
+       i2cOk
+       i2cErrors
+       i2cHeld
+       loopsPerSec
+       samplePeriodUs
+       b0Presses
+       b0Releases
+       b0ShortGaps
+       b0MinGapUs
+       b0DebPresses
+       b0MinHeldUs
+       logCount
+
+   - To write an input: click its Value cell, type the new number, press
+     Enter.
+   - Changing i2cFast resets all counts by itself.
+   - resetCounts and dumpLog go back to 0 by themselves.
+   - While the log is printing (a few seconds), the button is not read. Do
+     not press anything until PuTTY shows "=== END OF LOG ===".
+
+6. Meaning of the outputs
+   - b0Presses / b0Releases : raw edges of button 0, no debouncing.
+   - b0DebPresses           : presses counted after a 20 ms debounce. If you
+                              pressed 20 times, this should be 20.
+   - b0ShortGaps            : raw edges less than 30 ms after the previous
+                              raw edge. Each one is bounce.
+   - b0MinGapUs             : the shortest gap between two raw edges, in us.
+                              4294967295 = no gap yet.
+   - b0MinHeldUs            : the shortest raw press (press to release), in
+                              us. 4294967295 = no press yet.
+   - samplePeriodUs         : time between two reads of the button, in us.
+                              A bounce or a press shorter than this can be
+                              missed.
+   - In the PuTTY log, every line is one raw edge: its number, its time in
+     ms since the reset, the gap from the previous edge in us, and PRESS or
+     release. "<short" marks a gap under 30 ms.
+
+
+PART 2: SANITY CHECK OF THE 400 kHz BUS
+=======================================
+
+  i2cKHz (should be 400)                                [ ______ ]
+  i2cOk (should be 1)                                   [ ______ ]
+  i2cErrors after 10 s of doing nothing (should be 0)   [ ______ ]
+  loopsPerSec at 400 kHz                                [ ______ ]
+  samplePeriodUs at 400 kHz                             [ ______ ]
+  Hold button 0: i2cHeld becomes 1 and LD2 lights?      [ ______ ]
+
+  Now write 0 into i2cFast, wait 2 seconds:
+  i2cKHz (should be 100)                                [ ______ ]
+  loopsPerSec at 100 kHz (checkBounce gave 2462)        [ ______ ]
+  samplePeriodUs at 100 kHz                             [ ______ ]
+
+  Write 1 into i2cFast again before Part 3.
+
+  If at 400 kHz i2cOk is 0 or i2cErrors keeps growing, the bus does not
+  work at 400 kHz on this board. Write it in Part 4, and stop here.
+
+
+PART 3: THE TESTS
+=================
+
+Which button: "button 0" is I2C button 0 on the IO BOARD (one of its four
+buttons), NOT the blue B1 on the Nucleo. Check: while you hold it, i2cHeld
+is 1 and LD2 lights.
+
+The table columns are the Live Expressions without their "b0" prefix:
+  Presses = b0Presses, Releases = b0Releases, ShortGaps = b0ShortGaps,
+  MinGapUs = b0MinGapUs, DebPresses = b0DebPresses, MinHeldUs = b0MinHeldUs.
+  i2cErrors, samplePeriodUs and logCount keep their full names.
+
+How to press, in every round:
+  - Count your presses out loud, 1 to 20, and do NOT look at the screen
+    while pressing. If you are sure you lost count, write it in Part 4 and
+    repeat the round.
+  - Before every round: write 1 into resetCounts and clear PuTTY.
+  - After every round: copy the values, write 1 into dumpLog, wait for
+    "=== END OF LOG ===", and copy all of PuTTY where asked.
+
+
+TEST A: UNWANTED EVENTS AT 400 kHz   (i2cFast = 1, loopDelayMs = 0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Natural presses: one clear press and release, about one per second.
+
+          Presses  Releases  ShortGaps  MinGapUs      DebPresses  i2cErrors
+  Round 1 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+  Round 2 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+  Round 3 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+
+  Round 1 log: >>> paste here >>>
+
+
+  <<< end of round 1 log <<<
+
+  Round 2 and 3: no log needed.
+
+  A4. Now try to make it bounce: 20 very light, slow presses, letting the
+      button roll in and out of contact.
+
+          Presses  Releases  ShortGaps  MinGapUs      DebPresses
+          [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]
+
+  A4 log: >>> paste here >>>
+
+
+  <<< end of A4 log <<<
+
+
+TEST B: THE SAME AT 100 kHz, FOR COMPARISON   (i2cFast = 0, loopDelayMs = 0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Write 0 into i2cFast, wait 2 seconds. Natural presses, as in Test A.
+
+          Presses  Releases  ShortGaps  MinGapUs      DebPresses  i2cErrors
+  Round 1 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+  Round 2 [ ____ ] [ ____ ]  [ ____ ]   [ ________ ]  [ ____ ]    [ ____ ]
+
+  No log needed. Write 1 into i2cFast again when done.
+
+
+TEST C: MISSING EVENTS   (i2cFast = 1)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Short, quick taps: tap the button as briefly as you can, about two taps per
+second. The question is how short a tap is, and whether a slow loop misses
+it.
+
+  C1. loopDelayMs = 0. 20 quick taps.
+
+          Presses  Releases  DebPresses  MinHeldUs     samplePeriodUs
+          [ ____ ] [ ____ ]  [ ____ ]    [ ________ ]  [ ________ ]
+
+  C1 log: >>> paste here >>>
+
+
+  <<< end of C1 log <<<
+
+  C2. Write 50 into loopDelayMs. 20 quick taps.
+
+          Presses  Releases  DebPresses  samplePeriodUs
+          [ ____ ] [ ____ ]  [ ____ ]    [ ________ ]
+
+  C3. Write 150 into loopDelayMs. 20 quick taps.
+
+          Presses  Releases  DebPresses  samplePeriodUs
+          [ ____ ] [ ____ ]  [ ____ ]    [ ________ ]
+
+  C4. Write 300 into loopDelayMs. 20 quick taps.
+
+          Presses  Releases  DebPresses  samplePeriodUs
+          [ ____ ] [ ____ ]  [ ____ ]    [ ________ ]
+
+  Write 0 into loopDelayMs when done.
+
+
+PART 4: NOTES
+=============
+
+Build errors or warnings, anything unexpected, a round you repeated:
+
+[
+]
+
+
+HOW I WILL READ THE RESULTS (for your information)
+==================================================
+
+  - Presses must equal Releases (or one more, if you were still holding at
+    the end). A bounce always adds one press AND one release.
+  - DebPresses = 20 confirms your count; Presses minus DebPresses is the
+    number of UNWANTED presses caused by bounce.
+  - Test A against Test B: more short gaps at 400 kHz means the 100 kHz bus
+    hides bounces shorter than one read. If Test A shows extra presses in
+    most rounds, Part C(b) can show unwanted events reliably at 400 kHz.
+  - MinGapUs close to samplePeriodUs means the bounce is at the limit of
+    what the bus can see; a gap several times samplePeriodUs is a bounce
+    the bus resolves clearly.
+  - Test C: MinHeldUs in C1 is the length of your shortest tap. When
+    samplePeriodUs (C2 to C4) grows past it, Presses drops below 20: those
+    are MISSING events. The delay at which the count first drops tells how
+    slow a loop must be to show missing presses in Part C.
+  - Note: with a loop delay, bounce is also hidden (the bus is read too
+    rarely to see it), so Test C should show few short gaps.
+Send the filled file back.

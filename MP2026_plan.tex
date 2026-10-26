@@ -7,6 +7,8 @@
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \setlist{nosep,leftmargin=*}
 \newcommand{\flag}[1]{\textcolor{red}{[#1]}}
+% Bucher's remarks for discussion, on a yellow background (left out of the student exports)
+\newcommand{\bnote}[1]{\par\smallskip\noindent\colorbox{yellow}{\parbox{\dimexpr\linewidth-2\fboxsep}{#1}}\par\smallskip}
 \setlength{\emergencystretch}{3em}
 
 \title{Microprocessor-Based Product Design 2026/27\\[2pt]\large Course plan: sessions and assignments}
@@ -27,15 +29,14 @@
 \bottomrule
 \endfoot
 1 & 2.11.2026 & Intro and product mindset; logic gates, flip-flops, counters, edge vs.\ level; integers in binary/hex, two's
-    complement, overflow.
-  & First STM32 application: project from a provided \texttt{.ioc} $\to$ build $\to$ flash, breakpoints and
-    live expressions, blink LD2, \texttt{printf} to PuTTY.
+    complement, overflow, Basic C + IDE examples.
+  & Course policies; C basic; where your code goes (USER CODE sections); 
+Load *.ioc, build, flash and run; the debugger: breakpoints, stepping, live expressions.
   & \\
 \addlinespace
 2 & 9.11.2026 & Python $\to$ C: types (\texttt{stdint}), casting, scope, \texttt{\#define}/\texttt{const}, operators and
-    precedence, shifts and masks, pointers, structs, registers as pointers.
-  & Numbers and bits on the board: predict-then-run wrap-around, signed/unsigned in the debugger, binary printer, the
-    four bit idioms (set/clear/toggle/test).
+    precedence, shifts and masks, pointers, structs, registers as pointers, basic I/O.
+  & variables overflow; blink LD2; printf to PuTTY ;; the four bit idioms: set, clear, toggle, test.
   & A1 out: variables and wrap, bit operations, trigerring, timing, IR sensor logics \\
 \addlinespace
 3 & 16.11.2026 & \textcolor{blue}{The IO board as a black box: RGB LEDs (3 chips $\times$ 8 channels), colour mixing,
@@ -44,7 +45,8 @@
     rate, the 8N1 frame (start bit, 8 data bits, stop bit), the time to send one character.
     \flag{Yohai to discuss with Bucher: move timers, \texttt{HAL\_GetTick} and the UART protocol into lecture 3, since
     Assignment 1 needs them; the blue part could shrink to make room.}
-  & Edge vs.\ level triggering; blinking with \texttt{HAL\_GetTick} and \texttt{HAL\_Delay}.
+  & \texttt{HAL\_Delay} and \texttt{HAL\_GetTick}; operate the RGB LEDs (I2C “black box”); using includes for external
+    files
   & \textbf{Last material included in A1} \\
 \addlinespace
 4 & 23.11.2026 & Timers: counter, prescaler, period, polling vs.\ interrupts, priorities, \texttt{volatile}; software state machines;
@@ -107,151 +109,194 @@
 \noindent \textbf{Last material included in A1/A2:} an assignment may require material taught up to and including
 that lecture (one week after the assignment is out), and nothing taught later.
 
-\section{Grading}
+\section{Course policies}
+
+\subsection{Grading}
 
 \noindent
-\begin{tabularx}{\textwidth}{@{}l L r@{}}
+\begin{tabularx}{\textwidth}{@{}l L l l r@{}}
 \toprule
-Component & Contents & Weight \\
+Component & Contents & Out & Due & Weight \\
 \midrule
-Quiz 1 & Sessions 1 to 3: logic and numbers, C types and casting, bit operations, IO board LEDs and buttons & 10\% \\
-Quiz 2 & Sessions 4 to 8: timers and interrupts, state machines, I2C, PWM and input capture, motors and encoders,
-  PI speed control & 10\% \\
-Assignment 1 & Variable types, wrap-around, bit operations and shifting, logic, LED blinking, RGB LEDs & 20\% \\
-Assignment 2 & Software and hardware PWM, interrupts (EXTI, input capture), I2C drivers, encoders and speed,
-  step response (wheels in the air) & 30\% \\
-Assignment 3 & PI speed control from the fitted model, driving in straight lines, obstacle avoidance with the IR and
-  ultrasonic sensors, a state machine; bonus: return to the start & 30\% \\
+Quiz 1 & Questions related to Assignment 1
+  & & 23.11.2026 (in class) & 10\% \\
+Quiz 2 & Questions related to Assignments 1 and 2 & & 28.12.2026 (in class) & 10\% \\
+Assignment 1 & ``No wheels'' (basics): variable types, bit operations, timing, RGB LEDs, simple logic, interacting
+  with external events in real time
+  & 9.11.2026 & 30.11.2026 & 20\% \\
+Assignment 2 & ``Wheels in the air'': PWM, interrupts (EXTI, input capture), I2C, encoders, recording to MATLAB & 14.12.2026 & 4.1.2027 & 30\% \\
+Assignment 3 & ``Wheels on the ground'': PI speed controller, obstacle avoidance, a state machine, top-level algorithm & 11.1.2027 & 3.3.2027 & 30\% \\
 \bottomrule
 \end{tabularx}
 
+\smallskip\noindent
+\textit{Note: the contents and dates above may change slightly as the course progresses.}
+
+\subsection{General instructions for the assignments}
+\begin{itemize}
+  \item \textbf{Submission:} a single ZIP file named
+        \texttt{ass\#\_student1FamilyName\_\allowbreak student2FamilyName\_\allowbreak student3FamilyName.zip},
+        which contains all the deliverables:
+  \begin{itemize}[label=$\circ$]
+    \item a ZIP file with the archive of the project (follow the exact instructions of tutorial~1);
+    \item the PDF report, named exactly like the main ZIP file;
+    \item a folder named \texttt{videos}, with the video file(s) required in the instructions.
+  \end{itemize}
+  {\large\bfseries Only one member of the group, student~1, submits the file to Moodle.}
+  \item \textbf{Report format and structure:}
+  \begin{itemize}[label=$\circ$]
+    \item PDF only, typed (not handwritten). The report may be written in Hebrew or English.
+    \item A title page with the assignment number, the names, ID numbers and emails of the submitters, and the date.
+    \item An answer to each part. Do not copy full code sections into the report, but DO explain what you did, with
+          a flow chart or pseudo code.
+  \end{itemize}
+  \item \textbf{Code:}
+  \begin{itemize}[label=$\circ$]
+    \item Use functions to organise the code. Begin each function with a comment that says what it does.
+    \item Document your code: explain the important lines with a comment next to them.
+    \item Write your code inside the user-defined sections (USER CODE), as taught.
+    \item Keep the code tidy: do not include unused code.
+  \end{itemize}
+  \item \textbf{Use of AI:}
+  \begin{itemize}[label=$\circ$]
+    \item The use of AI is encouraged, within limits. Do not give an AI tool our original instructions as a prompt.
+          Instead, break them into tasks that you fully understand, and ask about those. Ignoring this rule (i) will
+          not teach you anything, (ii) is not allowed, and (iii) is easy for us to detect.
+    \item At the end of the report, declare that you have followed the course's AI rules.
+  \end{itemize}
+  \item \textbf{General:}
+  \begin{itemize}[label=$\circ$]
+    \item The assignments are done in groups. There are only 10 groups in the course, so most of you will work in
+          groups of three. Every student must register in the groups document on Moodle. If students leave the
+          course, we may change the groups during the semester.
+    \item The submission dates are fixed. Requests for an extension will not be approved, except in case of personal
+          or national emergencies, so plan your time accordingly.
+    \item The grade is based, among other things, on the efficiency and clarity of the code.
+    \item An engineering approach is expected: if you need to add a task, a code section, a state or a detail in the
+          report to fulfill the requirements, do it. Creativity and elegant writing will be rewarded.
+  \end{itemize}
+\end{itemize}
+
+\medskip\noindent
+{\large\bfseries The file names, the structure of the submission and the rest of these instructions are MANDATORY.
+Follow them, or you will lose points needlessly.\par}
+
+
 \section{Assignments}
 
-\subsection{General instructions}
-\begin{itemize}
-  \item \textbf{Report format:} PDF only, digitally typed (not handwritten). The report may be written in Hebrew or English.
-  \item \textbf{Report structure:}
-  \begin{itemize}
-    \item Title page: assignment number, names of the submitters, ID numbers, emails and date.
-        \item An answer to each part. Do not Copy full codes section into the report, but DO explain what have you done (flow chart \ pseudo code). 
-  \end{itemize}
-  \item \textbf{Code:} Use function for the code to be organized -  each function must have a documentaion in the beginning - what it is suppose to do. \\Document and explain your code, after a line of a code. \\ Write in the user-defined section, as taught.\\ Be oragnized. Unused codes section should not be included!
-  \item \textbf{Submission:} a single ZIP file named \texttt{lab\#\_studentname1\_studentname2.zip}, containing the code
-        folders of the different parts, the report and a video demonstrating the system in operation.
-  \item The grade is based, among other things, on the efficiency and clarity of the code.
-  \item An engineering approach is expected: if you need to add a task, a code section, a state or a detail in the report
-        in order to fulfil the requirements, do it. Creativity and elegant writing will be rewarded.
-\end{itemize}
 \subsection{Assignment 1: ``No wheels''}
-
-\textbf{Window:} out at session~2, due at session~5.\quad
-\textbf{Hardware:} NUCLEO-G474RE and the I2C IO board only. The motors are not powered.\quad
-\textbf{Allowed tools:} \texttt{HAL\_Delay}/\texttt{HAL\_GetTick}, GPIO, \texttt{printf} over LPUART1, the debugger, and
-the provided IO-board functions. The I2C internals stay a black box until session~5.
-
-\medskip\noindent
-\textbf{Provided files.} The project configuration is provided as \texttt{ass1.ioc}: you do not build it yourself (see
-``Assignment 1: project configuration'' below; creating a \texttt{.ioc} is taught in tutorial~6). The RGB LEDs and the
-buttons sit on the I2C bus, which is taught only in session~5. Until then, use the provided files \texttt{io\_board.h} and \texttt{io\_board.c}: copy \texttt{io\_board.h} into \texttt{Core/Inc}
-and \texttt{io\_board.c} into \texttt{Core/Src} (in CubeIDE, refresh the project with F5 afterwards). In
-\texttt{main.c}, add \texttt{\#include "io\_board.h"} inside \texttt{USER CODE BEGIN Includes} (include the
-\texttt{.h} file only, never the \texttt{.c} file), and call \texttt{ioBoardInit()} once inside
-\texttt{USER CODE BEGIN 2}. CubeIDE compiles \texttt{io\_board.c} automatically. To make \texttt{printf} print to PuTTY, copy the function in
-Appendix~A1 into your \texttt{main.c}.
-\flag{For Bucher and Yohai, delete before publishing: if the \texttt{printf} redirect to PuTTY is taught in
-lecture~3, perhaps this appendix can be deleted.}
+\textbf{Learning outcome.} Students will be exposed to C programming on real hardware. Students will learn to choose
+appropriate variable types, predict and explain overflow and wrap-around, manipulate individual bits with shifts and
+masks, use measured user inputs to affect the execution sequence, and produce timed LED behaviour residing on the
+hardware and linked to the microcontroller. At this stage, we treat some internal data communication paths, e.g., the
+I2C internals, at a high level, leaving deeper dives for later in the course.
 
 \medskip\noindent
-\textbf{Learning outcome.} Students work confidently in C on real hardware. They choose variable types deliberately,
-predict and explain overflow and wrap-around, manipulate individual bits with shifts and masks, combine inputs with
-logic, and produce timed LED behaviour on the on-board LED and the RGB LEDs.
+\textbf{Provided files:}
+\begin{itemize}
+\item \texttt{ass1.ioc} - This file maps the connected hardware (i.e. LEDs, pushbuttons) to the Microcontroller lines.
+      The provided file maps only the items relevant to the specific assignment.
+\item \texttt{io\_board.h} and \texttt{io\_board.c} - These files are part of the C project (STM32CubeIDE) and provide
+      ready functions for interacting with the RGB LEDs and the pushbuttons through the communication channel called
+      the I2C bus. Students should add within \texttt{main.c}, a call to \texttt{ioBoardInit()} once. This call should
+      be in the \texttt{USER CODE BEGIN 2}.
+\end{itemize}
 
-\paragraph{Part A: Variable types and wrap-around.}
+\paragraph{Part A: Variable types and range, signed and unsigned, wrap-around.}
 \begin{enumerate}[label=A.\arabic*, leftmargin=2.2em]
-  \item Increment a \texttt{uint8\_t}, an \texttt{int8\_t} and a \texttt{uint16\_t} past their limits. Watch them in Live
-        Expressions. Print them to PuTTY in decimal, hex and binary, and capture it in a video (think how to do it so
-        that the viewer can clearly see the wrap-around). In your report, describe what happens when a variable exceeds
-        its limit, and explain why.
-  \item Explain how to interpret a hex number as a decimal value, and the difference between the signed and the
-        unsigned cases. Show examples for \texttt{0x7F} (\texttt{uint8\_t} and \texttt{int8\_t}), \texttt{0xF0}
+  \item Increment a \texttt{uint8\_t}, an \texttt{int8\_t}, and a \texttt{uint16\_t} past their limits. Watch them in
+        Live Expressions (add a delay so that the changes are slow enough to allow for visual monitoring of the values).
+        Print these variables with \texttt{printf} via UART (see tutorial~2) to a terminal application on the PC (e.g., PuTTY) in these formats:
+        decimal, hex, and binary. Capture the live output to the terminal in a video you will submit with your report.
+        You may choose how to do it, so that the viewer can clearly see the wrap-around (i.e., when a \texttt{uint8\_t}
+        is increased beyond $2^8 - 1 = 255$).
+        \textbf{Note:} the GNU C library used with STM32CubeIDE supports standard format specifiers such as
+        \texttt{\%d}, \texttt{\%u}, \texttt{\%x}, \texttt{\%o}, etc., but there is no standard \texttt{\%b} specifier
+        for binary output.
+        In your report, describe what happens when a variable exceeds its limit, and explain why.
+  \item Explain how to interpret a hex number as a decimal value, and explain the difference between the signed and
+        the unsigned cases. Show examples for \texttt{0x7F} (\texttt{uint8\_t} and \texttt{int8\_t}), \texttt{0xF0}
         (\texttt{uint8\_t} and \texttt{int8\_t}) and \texttt{0xFFF6} (\texttt{uint16\_t} and \texttt{int16\_t}).
         In the code, assign each value in its hex form to variables of both types, and print them to PuTTY in hex,
-        binary and decimal. Explain what you see when a negative value is printed in hex.
-  \item Integer division and casting. Two students took the MP course. One attended the classes and got a good grade,
-        97. The other did not, and got a bad grade, 58. Store each grade in an unsigned integer variable, then compute
-        their average: first in a way that gives a wrong result because of integer arithmetic, then in a way that gives
-        the correct result. Show both in the code, and explain the difference in your report.
+        binary, and decimal. Explain what you see when a negative value is printed in hex.
+  \item Integer division and casting. Two students took the MP course. One attended the classes and got 97. The other
+        student got 58. Store each grade in an unsigned integer variable, then compute their average: first in a way
+        that gives a wrong result because of integer arithmetic, then in a way that gives the correct result. Show both
+        in your code and explain the difference in your report.
   % \item A brightness value that wraps around when it is increased past its maximum, then fixed with saturation.
 \end{enumerate}
 
 \paragraph{Part B: Bit operations and shifting.}
 \begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
-  \item Write the four bit idioms as functions (not macros). Each takes a value and a bit number, and returns the
-        result: \texttt{bitSet}, \texttt{bitClear} and \texttt{bitToggle} return the modified value, and
-        \texttt{bitTest} returns 0 or 1. For example: \texttt{GPIOA->ODR = bitSet(GPIOA->ODR, 5);}
-        Use them to operate the Nucleo's green LED (LD2, bit 5 of \texttt{GPIOA->ODR}) directly through the register,
-        without HAL GPIO functions, in this sequence: 1\,s of rest, SET; 1\,s of rest, CLEAR; then 3 times (1\,s of
-        rest, TOGGLE); then TEST. Show the test result on LED 0 of the IO board: lit when the result is 1, off when it
-        is 0.
-  \item Walking single LED. Keep the state of the 8 RGB LEDs in one \texttt{uint8\_t} variable, in which bit $n$
-        represents LED $n$ (1 = lit). Light one LED at a time, with 1\,s between transitions: LED 0, then LED 1, and so
-        on up to LED 7, then back to LED 0, forever. Print the variable in binary at every step.
-  \item Walking pair of LEDs. The same, with two adjacent LEDs lit: LEDs 0 and 1, then 1 and 2, and so on; after
+  \item Write the four bit operations as functions (not macros).\\
+        The functions will use bitwise operations. Each takes a value and a bit number, and returns the result:
+        \texttt{bitSet}, \texttt{bitClear} and \texttt{bitToggle} return the modified value, and \texttt{bitTest}
+        returns 0 or 1. For example: \texttt{GPIOA->ODR = bitSet(GPIOA->ODR, 5);}\\
+        Use them to affect the Nucleo's green LED (LD2, bit 5 of \texttt{GPIOA->ODR}) directly, without using the HAL
+        GPIO functions.\\
+        Run this sequence on LD2: wait 1\,s, set the bit (LED on); wait 1\,s, clear it (LED off); then
+        three times: wait 1\,s, toggle it. Finally, read the bit with \texttt{bitTest} and show the result on LED 0 of
+        the IO board: lit if 1, off if 0.
+  \item Moving a single lit LED using bitwise operations. Keep the state of the 8 RGB LEDs in one \texttt{uint8\_t}
+        variable, in which bit $n$ represents LED $n$ (1 = lit). Turn on one LED at a time, with 1\,s between steps:
+        LED 0, then LED 1, LED 2, and so on. After LED 7 is lit, return to LED 0, and repeat forever. Print the
+        variable in binary form at every step.
+  \item `Walking' pair of LEDs. Repeat B.2 above, but now with two adjacent LEDs lit: LEDs 0 and 1, then 1 and 2, and so on; after
         LEDs 6 and 7 come LEDs 7 and 0, then 0 and 1 again.
 \end{enumerate}
 \smallskip\noindent Rules for B.2 and B.3: the variable may change only through bit operations (shifts, OR, AND). Choosing the
 pattern with \texttt{if}/\texttt{switch} chains, counters mapped to LEDs, or tables of precomputed patterns is not
-accepted. The LEDs are then lit from the variable, by testing its bits. In your report, explain how your code moves
+accepted. The LEDs are then lit from the variable by testing its bits. In your report, explain how your code moves
 the pattern past bit 7 without losing it.
 \smallskip
 \begin{enumerate}[label=B.\arabic*, leftmargin=2.2em, start=4]
   \item Read the raw button byte with \texttt{readButtonsRaw()}. Using bit operations, convert it into a value in
         which bit $n$ is 1 while button $n$ is held: invert the active-low bits, then clear bits 4 to 7 with a mask.
-        Count how many buttons are held (0 to 4) by testing each bit, and print the count whenever it changes.
-        \flag{For Bucher and Yohai, delete before publishing: \texttt{io\_board.h} also provides
-        \texttt{readButtonsPressed()}, which already returns \texttt{(\textasciitilde raw) \& 0x0F} and so solves this
-        item. Consider providing a copy of \texttt{io\_board} without it.}
-        \flag{Also: \texttt{setLedMask()} in \texttt{io\_board.h} lights LEDs straight from a bit mask, which shortens
-        the display step of B.2 and B.3.}
+        Count how many buttons are held (0 to 4) by testing each bit and print the count whenever it changes.
 \end{enumerate}
 
 \paragraph{Part C: Input triggering.}
+Count the number of times button 0 is pressed, using four versions. In every version, show the count on the 8 RGB
+LEDs as an 8-bit binary number (bit $n$ = LED $n$) and print it to the terminal. Update the LEDs and print
+\textbf{only when the count changes}: an LED
+update or a printed line takes milliseconds, and would slow the loop down. Unless a task says otherwise, the loop has
+no delay, so the button is read as fast as possible. In each version, press the button exactly 20 times at a natural
+speed and record the count; do it 3 times.
 \begin{enumerate}[label=C.\arabic*, leftmargin=2.2em]
-  \item Count presses of button 0 and show the count on the 8 RGB LEDs as an 8-bit binary number (bit $n$ = LED
-        $n$); print it as well. Do it three times:
-        \begin{enumerate}[label=(\alph*)]
-          \item Level: increase the counter on every pass of the main loop while button 0 is held. Describe what
-                happens.
-          \item Edge: increase the counter only when button 0 changes from released to pressed
-                (\texttt{now \& \textasciitilde before}), polling as fast as possible, with no delay in the loop.
-                Press the button exactly 20 times and record the count. Repeat 3 times.
-          \item Debounced edge: accept a change of the button state only after it has been stable for 20\,ms. Press
-                exactly 20 times, 3 times over.
-        \end{enumerate}
-        In your report, compare the three results and explain each difference.
-        \flag{For Bucher and Yohai, delete before publishing: another bounce check will be done with the I2C bus
-        at 400\,kHz instead of the current 100\,kHz.}
+  \item Level-based counting: increase the counter on every pass of the main loop while button 0 is held. Also count the loop passes
+        per second, and print that number once a second. Explain the count you get.
+  \item Edge-based counting: increase the counter only when button 0 changes from released to pressed
+        (\texttt{now \& \textasciitilde before}). Do one more round of 20 very light, slow presses. Explain why the
+        count is not always 20.
+  \item Debounced edge counting: accept a change of the button state only after it has been stable for 20\,ms (use
+        \texttt{HAL\_GetTick}).
+  \item Missing presses: add \texttt{HAL\_Delay(150)} at the end of the loop of C.3, simulating another process running
+        on the microcontroller and not allowing the code to check for button presses. Press the button 20 times, as
+        briefly as you can. Repeat with the edge version of C.2 and the same delay.
 \end{enumerate}
+In your report, put all the results in one table and explain the differences, using the duration of a press and the
+time of one loop pass. Explain why presses are lost in C.4, and why the debounced version loses more of them.
+
 
 \paragraph{Part D: LED blinking and timing.}
 \begin{enumerate}[label=D.\arabic*, leftmargin=2.2em]
   \item Write a loop that toggles LD2, prints a status line of about 60 characters to PuTTY with \texttt{printf}, and
         then waits with \texttt{HAL\_Delay(500)}; stop after 200 toggles. Before running it, calculate how long the
         200 toggles will take; then run it and measure. In your report, explain why the total is not exactly
-        200 $\times$ 500\,ms, using the UART frame format and the baud rate.
+        200 $\times$ 500\,ms (hint: understand the UART).
   \item Blink LD2 (PA5) at a rate set by a global variable that can be changed in the debugger.
   \item Two LEDs blinking at different rates, done twice: first with \texttt{HAL\_Delay}, then non-blocking with
         \texttt{HAL\_GetTick}. Measure and explain the difference.
 \end{enumerate}
 \paragraph{Part E: Integration and logic.}
-Write a program with an \emph{armed} state that button 0 toggles (one press = one action, as in Part C). The trigger
-condition is: the system is armed \textbf{and} the IR sensor (PA7) detects an obstacle.
+Write a program with an \emph{armed} state toggled by button 0 being pressed. The trigger condition is: the system is
+armed \textbf{and} the IR sensor (PA7) detects an obstacle.
 \begin{itemize}
-  \item While the condition holds, all 8 LEDs (white) grow brighter step by step, from off to full brightness, over
+  \item While the condition holds, all 8 LEDs (white) grow brighter stepwise, from off to full brightness, over
         about 2\,s. When full brightness is reached, the LEDs switch off, and stay off until the condition has become
-        false and true again.
-  \item If the condition stops holding during the brightening, the LEDs dim step by step from their current
-        brightness until they are off.
+        false and then true again.
+  \item If the condition above is not true while the brightening sequence takes place, the LEDs start dimming, step
+        by step, from their current brightness until they become unlit.
 \end{itemize}
 Set the brightness of all LEDs with \texttt{setRGB(v, v, v)} from \texttt{io\_board.h} ($v$ = 0 to 255). Pace the steps
 with \texttt{HAL\_GetTick}, so the inputs are read on every pass of the loop. In your report, give the truth table of
@@ -259,19 +304,7 @@ the trigger condition, and draw the behaviour as a state diagram. Creativity bon
 
 \subsubsection*{Assignment 1: project configuration (provided: \texttt{ass1.ioc})}
 The STM32CubeMX configuration for Assignment~1 is provided as \texttt{ass1.ioc}. The tables below list what it contains,
-for reference. The wheels are not used.
-
-\paragraph{Creating the project.} You need STM32CubeIDE and STM32CubeMX.
-\begin{enumerate}
-  \item Create a folder named \texttt{ass1} (for example inside your STM32CubeIDE workspace) and copy \texttt{ass1.ioc}
-        into it.
-  \item Open \texttt{ass1.ioc} in STM32CubeMX and click \emph{GENERATE CODE}. The toolchain (STM32CubeIDE) is already
-        selected. The project is generated into the \texttt{ass1} folder.
-  \item In STM32CubeIDE: \emph{File $\to$ Import $\to$ STM32CubeMX/STM32CubeIDE Project}, and select the \texttt{ass1}
-        folder. Build the project once before adding your code.
-\end{enumerate}
-\flag{Yohai, delete before publishing: check these steps and the menu names on a clean PC with STM32CubeIDE 2.2 and
-STM32CubeMX 6.18 (in CubeIDE 2.x, CubeMX is a separate program).}
+for reference. The wheels are not used. Turning \texttt{ass1.ioc} into a CubeIDE project is shown in tutorial~1.
 
 \paragraph{System.}\leavevmode\\[2pt]
 \begin{tabularx}{\textwidth}{@{}l L@{}}
@@ -306,7 +339,7 @@ PA7 & GPIO\_Input, no pull & IR\_SENSOR & IR obstacle sensor at the front of the
 \toprule
 Peripheral & Mode & Settings \\
 \midrule
-I2C1 & I2C & Standard mode, 100\,kHz \\
+I2C1 & I2C & Fast mode, 400\,kHz \\
 LPUART1 & Asynchronous & 115\,200 baud, 8 data bits, no parity, 1 stop bit \\
 NVIC & & EXTI line [15:10] interrupt enabled (B1) \\
 \bottomrule
@@ -327,21 +360,6 @@ Address (7-bit) & Chip & Role \\
 \paragraph{Serial terminal.} Connect PuTTY to the ST-LINK COM port at 115\,200 baud, 8 data bits, no parity, 1 stop
 bit.
 
-\subsubsection*{Appendix A1: code to copy}
-\paragraph{printf to PuTTY.} Copy into \texttt{main.c}: the include into \texttt{USER CODE BEGIN Includes}, the function
-into \texttt{USER CODE BEGIN 0}.
-\begin{verbatim}
-#include <stdio.h>
-
-/* route printf to LPUART1 (PuTTY) */
-int __io_putchar(int ch)
-{
-    HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-    return ch;
-}
-\end{verbatim}
-End every printed line with \texttt{\textbackslash r\textbackslash n}: the output appears only when a line is complete.
-
 \subsection{Assignment 2: ``Wheels in the air''}
 
 \textbf{Window:} out at session~7, due at session~10. The assignment may use everything taught up to and including
@@ -353,7 +371,11 @@ project configuration'' below (no \texttt{.ioc} is provided for this assignment)
 
 \medskip\noindent
 \textbf{Provided files.} \texttt{io\_board.h} and \texttt{io\_board.c} from Assignment~1 may still be used in Parts A,
-B, D and E. Part~C replaces them with your own driver. The \texttt{printf} redirect of Appendix~A1 is needed again.
+B, D and E. Part~C replaces them with your own driver. The \texttt{printf} redirect of tutorial~2 is needed again.
+\texttt{sonar.h} and \texttt{sonar.c} read the ultrasonic sensor: copy \texttt{sonar.h} to \texttt{Core/Inc} and
+\texttt{sonar.c} to \texttt{Core/Src}, and add \texttt{\#include "sonar.h"} to \texttt{main.c}. They give a
+\emph{raw} reading, a number without a unit that grows with the distance; Part~B.1 turns it into millimetres. The use
+of each function is explained in \texttt{sonar.h}.
 
 \medskip\noindent
 \textbf{Learning outcome.} Students drive outputs with software and with hardware PWM and can explain the difference;
@@ -409,32 +431,42 @@ ear hears from about 20\,Hz to 20\,kHz. They decide which PWM frequency is good 
 \end{enumerate}
 
 \paragraph{Part B: Polling vs.\ interrupts.}
-Wheel~1 turns at a constant duty of 40\,\%. It must stop as soon as the IR sensor detects an obstacle \textbf{or} the
-ultrasonic sensor measures a distance below 15\,cm, and it may start again only after both have been clear for 1\,s.
+Wheel~1 turns at a constant duty of 40\,\%. It must stop as soon as the IR sensor detects an obstacle \textbf{OR} the
+ultrasonic sensor measures a distance below 150\,mm (with your factor from B.1), and it may start again only after both have been clear for 1\,s.
 The main loop also does the ``rest of the program'': it updates all 8 RGB LEDs (green while the wheel turns, red while
 it is stopped), prints one status line, and then calls \texttt{HAL\_Delay(150)} to stand for other work. Keep this
 workload in both versions.
 \begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
-  \item Without any interrupts. Disable the IR interrupt with \texttt{HAL\_NVIC\_DisableIRQ(EXTI9\_5\_IRQn)}, read PA7
-        with \texttt{HAL\_GPIO\_ReadPin}, and start the echo capture with \texttt{HAL\_TIM\_IC\_Start} (not the
-        \texttt{\_IT} version). Read each captured edge by polling the capture flag of TIM5 channel~2
-        (\texttt{\_\_HAL\_TIM\_GET\_FLAG(\&htim5, TIM\_FLAG\_CC2)}, then the captured value with
-        \texttt{HAL\_TIM\_ReadCapturedValue}). Then test:
+  \item Calibration of the ultrasonic sensor. With the wheels off, call \texttt{sonarStartInterrupt()} once, call
+        \texttt{sonarCaptureEdge(htim)} from your \texttt{HAL\_TIM\_IC\_CaptureCallback}, and print
+        \texttt{sonarGetRaw()} in the main loop. Place a flat obstacle at known distances, from 50 to 500\,mm in steps of
+        50\,mm, and record the raw reading at each (the average of 10 readings). Plot raw reading against distance, fit a
+        straight line, and give the factor that turns a raw reading into millimetres. In your report, compare it with
+        what you expect from the speed of sound (343\,m/s) and the timer settings of TIM5, and give the shortest and
+        the longest distance the sensor measures reliably.
+  \item Without any interrupts. Disable the IR interrupt with \texttt{HAL\_NVIC\_DisableIRQ(EXTI9\_5\_IRQn)} and read
+        PA7 with \texttt{HAL\_GPIO\_ReadPin}. Start the ultrasonic sensor with \texttt{sonarStartPolling()} (the TIM5
+        interrupt stays off) and call \texttt{sonarPoll()} in the main loop: it returns 1 when a new reading is ready.
+        Then test:
         \begin{enumerate}[label=(\alph*)]
           \item Move a hand quickly past the IR sensor, 10 times. How many times did the wheel stop?
-          \item Over 10\,s, how many of the 100 ultrasonic measurements (one every 100\,ms) gave a distance?
+          \item Over 10\,s, how many of the 100 ultrasonic measurements (one every 100\,ms) gave a distance? Use
+                \texttt{sonarGetReadingCount()} and \texttt{sonarGetMissedCount()}, and explain why readings are
+                missed.
           \item Measure the loop period with \texttt{HAL\_GetTick}. From it, give the worst-case time from an obstacle
                 appearing to the wheel stopping, and the angle the wheel turns in that time at 40\,\% duty (use your
                 speed measurement from Part~D or estimate it from the video).
         \end{enumerate}
-  \item With interrupts. Use the EXTI interrupt of PA7 (both edges) and the TIM5 input-capture interrupt
-        (\texttt{HAL\_TIM\_IC\_Start\_IT}). The callbacks stop the wheel themselves, by writing 0 to \texttt{TIM2->CCR1},
-        and set a flag; the main loop, with the same workload as in B.1, handles the LEDs and the restart. Repeat
-        tests (a) to (c).
+  \item With interrupts. Use two interrupts: the EXTI interrupt of PA7 for the IR sensor (both edges,
+        \texttt{HAL\_GPIO\_EXTI\_Callback}), and the TIM5 input-capture interrupt for the ultrasonic sensor
+        (\texttt{sonarStartInterrupt()}, then \texttt{sonarCaptureEdge(htim)} inside \texttt{HAL\_TIM\_IC\_CaptureCallback};
+        it returns 1 when a new reading is ready). The callbacks stop the wheel themselves, by writing 0 to
+        \texttt{TIM2->CCR1}, and set a flag; the main loop, with the same workload as in B.2, handles the LEDs and the
+        restart. Repeat tests (a) to (c).
 \end{enumerate}
-In your report, compare B.1 and B.2 in a table and explain the difference. Explain also why the callback may write
+In your report, compare B.2 and B.3 in a table and explain the difference. Explain also why the callback may write
 \texttt{TIM2->CCR1} but must not update the RGB LEDs, and which variables must be \texttt{volatile}. Show both
-versions in the video, with the wheel continuing to turn in B.1.
+versions in the video, with the wheel continuing to turn in B.2.
 
 \paragraph{Part C: Your own I2C driver.}
 From now on the IO board is no longer a black box: do not use \texttt{io\_board.c} in this part. Write your own
@@ -451,7 +483,7 @@ PCA9634, PCA9538A and PCA9685.
         brighter or dimmer.
   \item One transaction or many. Set all 8 channels of one PCA9634 twice: once with 8 separate writes, and once with a
         single write of 8 bytes using the chip's auto-increment (see the control register in the datasheet). Time
-        1000 repetitions of each. From the I2C bit rate (100\,kHz) and the number of bits in each transaction
+        1000 repetitions of each. From the I2C bit rate (400\,kHz) and the number of bits in each transaction
         (address, register, data, ACK bits, start and stop), calculate the expected times and compare them with your
         measurements.
   \item Buttons. Read the input register of the PCA9538A with \texttt{HAL\_I2C\_Mem\_Read} and print the state of the 4
@@ -507,7 +539,7 @@ and add only the new items below.
   \item Open \texttt{ass1.ioc} in STM32CubeMX and save a copy with \emph{File $\to$ Save Project As} into a new folder
         named \texttt{ass2}. This gives \texttt{ass2.ioc}; \texttt{ass1.ioc} stays unchanged.
   \item In \texttt{ass2.ioc}, add the pins and peripherals listed below. Leave the Assignment~1 settings as they are.
-  \item Click \emph{GENERATE CODE}, then import the \texttt{ass2} folder into STM32CubeIDE as in Assignment~1.
+  \item Click \emph{GENERATE CODE}, then import the \texttt{ass2} folder into STM32CubeIDE as in tutorial~1.
 \end{enumerate}
 All timer clocks are 170\,MHz.
 
@@ -543,15 +575,15 @@ PC12 & TIM5\_CH2, Input Capture direct mode & ECHO: both edges are captured; the
 \end{tabularx}
 
 \smallskip\noindent
-Distance: $d\,[\mathrm{mm}] = t_\mathrm{echo}\,[\mu\mathrm{s}] \times 343 / 2000$.\\
-The trigger pulses start only after \texttt{HAL\_TIM\_PWM\_Start(\&htim5, TIM\_CHANNEL\_1)}.
+The trigger pulses and the echo capture start only when you call \texttt{sonarStartPolling()} or
+\texttt{sonarStartInterrupt()} (see \texttt{sonar.h}), once, after the \texttt{MX\_\ldots\_Init()} calls.
 
 \paragraph{Peripherals.}\leavevmode\\[2pt]
 \begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}p{4.2cm} L@{}}
 \toprule
 Peripheral & Mode & Settings \\
 \midrule
-I2C1 & I2C & Standard mode, 100\,kHz \\
+I2C1 & I2C & Fast mode, 400\,kHz \\
 LPUART1 & Asynchronous & 115\,200 baud, 8N1 \\
 TIM2 & PWM Generation CH1 to CH4 & Prescaler 0, period 9\,999: 17\,kHz PWM, duty = CCR / 10\,000. Pulse 0, polarity
   high \\
@@ -559,8 +591,8 @@ TIM2 & PWM Generation CH1 to CH4 & Prescaler 0, period 9\,999: 17\,kHz PWM, duty
 TIM1, TIM8, TIM3, TIM4 & Combined channels: Encoder Mode TI1 & Prescaler 0, period 65\,535: 16-bit up/down counter.
   Input polarity rising, filter 0 \\
 \addlinespace
-TIM5 & CH1 PWM Generation, CH2 Input Capture direct mode & Prescaler 9, period 1\,699\,999: tick = 1/17\,$\mu$s,
-  period 100\,ms. CH1 pulse = 170 (10\,$\mu$s). CH2 polarity: both edges \\
+TIM5 & CH1 PWM Generation, CH2 Input Capture direct mode & Prescaler 9, period 1\,699\,999 (one trigger
+  every 100\,ms). CH1 pulse = 170. CH2 polarity: both edges \\
 \addlinespace
 TIM7 & Activated (basic timer) & Prescaler 169, period 99: 1\,MHz tick, update interrupt at 10\,kHz (the
   software PWM of A.2) \\
