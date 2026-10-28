@@ -3,6 +3,8 @@
 \usepackage{booktabs,tabularx,xltabular,array,enumitem,xcolor,hyperref}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\usepackage{listings}
+\lstset{language=C, basicstyle=\ttfamily\small, columns=fullflexible, keepspaces=true, upquote=true, showstringspaces=false, frame=single, xleftmargin=1em, xrightmargin=1em}
 \hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \setlist{nosep,leftmargin=*}
@@ -231,16 +233,100 @@ Serial console & USB cable (ST-LINK virtual COM port) & \texttt{printf} (see tut
 \end{minipage}
 
 \smallskip\noindent
-The power jumper of the Nucleo board must be on \textbf{5V\_STLK} (power from the USB cable). On E5V the
-microcontroller is not powered, and the debugger reports ``No STM32 target found''.
+The power jumper of the Nucleo board must be on \textbf{E5V} (the board takes its 5\,V from the cart). If the
+cart's power is off, the microcontroller is not powered, and the debugger reports ``No STM32 target found''.
+
+\paragraph{One program for the whole assignment, chosen by \texttt{task}.}
+All the tasks of this assignment are in one program. A global variable chooses what runs. Declare it in
+\texttt{main.c}, in the \texttt{USER CODE BEGIN PV} section, exactly like this (same name, same type, global and not
+\texttt{static}):
+\begin{lstlisting}
+volatile uint8_t task = 0;   /* the task that runs: change it in Live Expressions */
+\end{lstlisting}
+To choose a task, write its number into \texttt{task} in Live Expressions while the program runs. The tens digit is
+the part, the units digit the item:
+
+\smallskip\noindent
+\begin{tabularx}{\textwidth}{@{}c L c L c L@{}}
+\toprule
+\texttt{task} & Runs & \texttt{task} & Runs & \texttt{task} & Runs \\
+\midrule
+0  & idle (the start-up value) & 31 & C.1 & 41 & D.1 \\
+11 & A.1 & 32 & C.2 & 42 & D.2 \\
+12 & A.2 & 33 & C.3 & 43 & D.3 with \texttt{HAL\_Delay} \\
+13 & A.3 & 34 & C.4 & 44 & D.3 with \texttt{HAL\_GetTick} \\
+21 & B.1 & 35 & C.5 on the debounced counter of C.4 & 51 & E \\
+22 & B.2 & 36 & C.5 on the edge counter of C.3 & & \\
+23 & B.3 & & & & \\
+\bottomrule
+\end{tabularx}
+
+\smallskip\noindent
+Rules for the program:
+\begin{itemize}
+  \item It starts idle (\texttt{task} = 0). When \texttt{task} gets a new number, the program prints
+        \texttt{=== task N ===} and runs task N.
+  \item Every task checks \texttt{task} on every pass of its loop, and returns as soon as it changes. Before the next
+        task starts, LD2 and all the RGB LEDs are switched off.
+  \item A task that has an end prints \texttt{=== task N done ===} when it finishes, and then waits until \texttt{task}
+        changes. To run a task again, write 0 and then its number again.
+  \item A number that is not in the table prints \texttt{no task N}.
+\end{itemize}
+Start from this skeleton. Write one function per task, and add a \texttt{case} for each one:
+\begin{lstlisting}
+/* in the while (1) loop of main(), USER CODE BEGIN 3 */
+uint8_t current = task;
+if (current != 0)
+{
+    printf("=== task %u ===\r\n", current);
+}
+switch (current)
+{
+    case 0:  while (task == 0) { }   break;   /* idle: wait for a choice */
+    case 11: taskA1();               break;
+    case 12: taskA2();               break;
+    /* ... one case for every task number in the table ... */
+    default:
+        printf("no task %u\r\n", current);
+        while (task == current) { }
+        break;
+}
+/* switch off LD2 and all the RGB LEDs here */
+
+/* a task with an end */
+void taskA3(void)
+{
+    /* ... the work of A.3 ... */
+    printf("=== task 13 done ===\r\n");
+    while (task == 13) { }                   /* wait for another choice */
+}
+
+/* a task that runs until another one is chosen */
+void taskB2(void)
+{
+    while (task == 22)
+    {
+        /* ... one step of B.2 ... */
+    }
+}
+\end{lstlisting}
+
+\paragraph{Printing the results: the line formats are MANDATORY.}
+Every result is printed to PuTTY. A result line starts with the tag of its item (\texttt{A1:}, \texttt{B2:}, and so
+on), followed by the fields exactly as shown in each item, separated by single spaces, and ends with
+\texttt{\textbackslash r\textbackslash n}. Write numbers in decimal, unless the field shows otherwise. Write hex as
+\texttt{0x} with capital letters and all the digits of the type (\texttt{0x0A}, \texttt{0x00FF}), and binary as
+\texttt{0b} with all the bits of the type and no separators (\texttt{0b00001010}). You may print other lines as well,
+as long as they do not start with a tag.
 
 \paragraph{Part A: Variable types and range, signed and unsigned, wrap-around.}
 \begin{enumerate}[label=A.\arabic*, leftmargin=2.2em]
-  \item Increment a \texttt{uint8\_t}, an \texttt{int8\_t} and a \texttt{uint16\_t} past their limits. Watch them in
-        Live Expressions (add a delay, so that the values change slowly enough to follow). Also print them with
-        \texttt{printf} via UART (see tutorial~2) to a terminal program on the PC (e.g.\ PuTTY), in decimal, hex and
-        binary. Choose how to make the wrap-around easy to see, e.g.\ start close to the limit, use a longer delay
-        near it, or a conditional breakpoint.
+  \item Increment a \texttt{uint8\_t}, an \texttt{int8\_t} and a \texttt{uint16\_t} past their limits. Start them at
+        250, 120 and 65530. Print the start values, then add 1 to each of the three every 500\,ms, and print a line
+        after each step; stop after 12 steps (13 lines in all). Each line:\\
+        {\footnotesize\texttt{A1: u8=250 0xFA 0b11111010 i8=120 0x78 0b01111000 u16=65530 0xFFFA 0b1111111111111010}}\\
+        The hex and binary fields show the bits stored in the variable: 8 bits for \texttt{u8} and \texttt{i8}, 16
+        for \texttt{u16}. Also watch the three variables in Live Expressions while the task runs.
         \textbf{Note:} the C library used with STM32CubeIDE supports the standard format specifiers, such as
         \texttt{\%d}, \texttt{\%u}, \texttt{\%x} and \texttt{\%o}, but it has no standard \texttt{\%b} specifier for
         binary output, so write your own function for it.
@@ -248,17 +334,21 @@ microcontroller is not powered, and the debugger reports ``No STM32 target found
   \item Explain how to read a hex number as a decimal value, and the difference between the signed and the unsigned
         cases. Show examples for \texttt{0x7F} (\texttt{uint8\_t} and \texttt{int8\_t}), \texttt{0xF0}
         (\texttt{uint8\_t} and \texttt{int8\_t}) and \texttt{0xFFF6} (\texttt{uint16\_t} and \texttt{int16\_t}).
-        In your code, assign each value in its hex form to variables of both types, and print them to PuTTY in hex,
-        binary and decimal. Explain what you see when a negative value is printed in hex.
+        In your code, assign each value in its hex form to variables of both types, and print six lines, in the order
+        above, for example:\\
+        \texttt{A2: 0x7F uint8\_t dec=127 hex=0x7F bin=0b01111111 raw=0x7F}\\
+        \texttt{hex} and \texttt{bin} show the bits stored in the variable, as in A.1. \texttt{raw} is the variable
+        printed with \texttt{0x\%X} as it is, without a cast. Explain what you see in \texttt{raw} when the value is
+        negative.
   \item Integer division and casting. Two students took the MP course. One attended the classes and got 97; the other
         got 58. Store each grade in an unsigned integer variable, then compute their average: first in a way that
         gives a wrong result because of integer arithmetic, then in a way that gives the correct result. Show both in
-        your code, and explain the difference in your report.
+        your code, print them as \texttt{A3: wrong=77 right=77.5}, and explain the difference in your report.
+        \textbf{Hint:} by default, \texttt{printf} in STM32CubeIDE does not print \texttt{float} values
+        (\texttt{\%f}). Either enable it in the project properties (\emph{C/C++ Build $\to$ Settings $\to$ Tool Settings $\to$ MCU Settings $\to$
+        Use float with printf from newlib-nano}), or print the whole part and the tenths as two integers.
   % \item A brightness value that wraps around when it is increased past its maximum, then fixed with saturation.
 \end{enumerate}
-
-\noindent\textbf{Video:} \texttt{V\_A12}, showing A.1 and A.2 as they run (both Live Expressions and PuTTY), with
-your own voice explaining what happens.
 
 \paragraph{Part B: Bit operations and shifting.}
 \begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
@@ -266,68 +356,79 @@ your own voice explaining what happens.
         number, and returns the result: \texttt{bitSet}, \texttt{bitClear} and \texttt{bitToggle} return the modified
         value, and \texttt{bitTest} returns 0 or 1. For example: \texttt{GPIOA->ODR = bitSet(GPIOA->ODR, 5);}\\
         Use them to control the Nucleo's green LED (LD2, bit~5 of \texttt{GPIOA->ODR}) directly, without the HAL GPIO
-        functions. Run this sequence on LD2: wait 1\,s, set the bit (LED on); wait 1\,s, clear it (LED off); wait
-        1\,s, toggle it. Finally, read the bit with \texttt{bitTest} and show the result on LED~0 of the IO board: lit
-        if 1, off if 0.
+        functions. Run this sequence on LD2: clear the bit (LED off); wait 1\,s, set it (LED on); wait 1\,s, clear it
+        (LED off); wait 1\,s, toggle it. After each step, read the bit back with \texttt{bitTest} and print it:\\
+        \texttt{B1: start LD2=0}, \texttt{B1: set LD2=1}, \texttt{B1: clear LD2=0}, \texttt{B1: toggle LD2=1}\\
+        Finally, show the last result on LED~0 of the IO board (lit if 1, off if 0), and print \texttt{B1: LED0=1}
+        (or \texttt{=0}).
   \item Moving a single lit LED with bit operations. Keep the state of the 8 RGB LEDs in one \texttt{uint8\_t}
         variable, in which bit $n$ stands for LED $n$ (1 = lit). Light one LED at a time, with 1\,s between steps:
-        LED~0, then LED~1, LED~2, and so on. After LED~7, return to LED~0, and repeat forever. Print the variable in
-        binary at every step.
+        LED~0, then LED~1, LED~2, and so on. After LED~7, return to LED~0, and repeat forever. At every step, print
+        the variable that is shown on the LEDs: \texttt{B2: 0b00000001}, then \texttt{B2: 0b00000010}, and so on.
   \item A ``walking'' pair of LEDs. Repeat B.2, but with two adjacent LEDs lit: LEDs 0 and 1, then 1 and 2, and so
-        on; after LEDs 6 and 7 come LEDs 7 and 0, then 0 and 1 again.
+        on; after LEDs 6 and 7 come LEDs 7 and 0, then 0 and 1 again. Print \texttt{B3: 0b00000011}, and so on.
 \end{enumerate}
 \smallskip\noindent Rules for B.2 and B.3: the variable may change only through bit operations (shifts, OR, AND).
 Choosing the pattern with \texttt{if}/\texttt{switch} chains, counters mapped to LEDs, or tables of precomputed
 patterns is not accepted. Light the LEDs from the variable by testing its bits. In your report, explain how your code
 moves the pattern past bit~7 without losing it.
-\smallskip
-\begin{enumerate}[label=B.\arabic*, leftmargin=2.2em, start=4]
-  \item Read the raw button byte with \texttt{readButtonsRaw()}. Using bit operations, turn it into a value in which
-        bit $n$ is 1 while button $n$ is held: invert the active-low bits, then clear bits 4 to 7 with a mask. Count
-        how many buttons are held (0 to 4) by testing each bit, and print the count whenever it changes.
-\end{enumerate}
-
-\noindent\textbf{Video:} \texttt{V\_B1234}, showing B.1 to B.4 as they run.
 
 \paragraph{Part C: Input triggering.}
-Count how many times button~0 of the IO board is pressed, in four versions. In every version, show the count on the
-8 RGB LEDs as an 8-bit binary number (bit $n$ = LED $n$), and print it to the terminal. Update the LEDs and print
-\textbf{only when the count changes}: an LED update or a printed line takes milliseconds, and would slow the loop
-down. Unless a task says otherwise, the loop has no delay, so the button is read as fast as possible. In each version,
-press the button exactly 20 times at a natural speed and record the count; do this 3 times.
 \begin{enumerate}[label=C.\arabic*, leftmargin=2.2em]
+  \item Read the raw button byte with \texttt{readButtonsRaw()}. Using bit operations, turn it into a value in which
+        bit $n$ is 1 while button $n$ is held: invert the active-low bits, then clear bits 4 to 7 with a mask. Count
+        how many buttons are held (0 to 4) by testing each bit. Print a line when the task starts and whenever the
+        count changes:
+        \texttt{C1: raw=0b11111110 held=0b00000001 count=1}
+\end{enumerate}
+In C.2 to C.5, count how many times button~0 of the IO board is pressed, in four versions. In every version, show the
+count on the 8 RGB LEDs as an 8-bit binary number (bit $n$ = LED $n$), and print it as \texttt{C2: count=20} (with the
+tag of the item). Update the LEDs and print \textbf{only when the count changes}: an LED update or a printed line
+takes milliseconds, and would slow the loop down. Unless a task says otherwise, the loop has no delay, so the button
+is read as fast as possible. In each version, press the button exactly 20 times at a natural speed and record the
+count; do this 3 times. The hints say roughly what to expect; your report explains why.
+\begin{enumerate}[label=C.\arabic*, leftmargin=2.2em, start=2]
   \item Level-based counting: increase the counter on every pass of the main loop while button~0 is held. Here the
         count changes on every pass, so update the LEDs and print the count only when the button is released. Also
-        count the loop passes per second, and print that number once a second. Explain the count you get.
+        count the loop passes per second, and print that number once a second, as \texttt{C2: passes=<n>}.
+        \textbf{Expect} a count much larger than 20.
   \item Edge-based counting: increase the counter only when button~0 changes from released to pressed
-        (\texttt{now \& \textasciitilde before}). Do one more round of 20 very light, slow presses. Explain why the
-        count is not always 20.
+        (\texttt{now \& \textasciitilde before}). Do one more round of 20 very light, slow presses.
+        \textbf{Expect} 20 or a little more, and with the light presses more often more than 20.
   \item Debounced edge counting: accept a change of the button state only after the new state has been stable for
-        20\,ms (use \texttt{HAL\_GetTick}).
-  \item Missing presses: add \texttt{HAL\_Delay(150)} at the end of the loop of C.3. It stands for another task running
-        on the microcontroller, during which the code cannot check the button. Press the button 20 times, as briefly as
-        you can. Repeat with the edge-based version of C.2 and the same delay.
+        20\,ms (use \texttt{HAL\_GetTick}). \textbf{Expect} exactly 20.
+  \item Missing presses: add \texttt{HAL\_Delay(150)} at the end of the loop of C.4 (task 35). It stands for another
+        task running on the microcontroller, during which the code cannot check the button. Press the button 20 times,
+        as briefly as you can. Repeat with the edge-based version of C.3 and the same delay (task 36).
+        \textbf{Expect} much less than 20 in both versions, and even fewer in the debounced one.
 \end{enumerate}
-In your report, put all the results in one table and explain the differences, using the duration of a press and the
-time of one loop pass. Explain why presses are lost in C.4, and why the debounced version loses more of them.
+In your report, put all the results of C.2 to C.5 in one table and explain the differences, using the duration of a
+press and the time of one loop pass. Explain why presses are lost in C.5, and why the debounced version loses more of
+them.
+
+\noindent\textbf{Video:} \texttt{V\_C}, showing C.1 to C.5 as they run, with PuTTY visible: in C.1 press several
+combinations of buttons, and in C.2 to C.5 a few presses each (not all 20).
 
 \paragraph{Part D: LED blinking and timing.}
 \begin{enumerate}[label=D.\arabic*, leftmargin=2.2em]
   \item Write a loop that toggles LD2, prints a status line of about 60 characters to PuTTY with \texttt{printf}, and
-        then waits with \texttt{HAL\_Delay(500)}; stop after 200 toggles. Before running it, calculate how long the
-        200 toggles should take; then run it and measure the total time with \texttt{HAL\_GetTick} (read it before
-        the first toggle and after the last). In your report, explain why the total is not exactly
-        200 $\times$ 500\,ms (hint: think about the UART).
-  \item Blink LD2 at a rate set by a global variable that you change in the debugger while the program runs.
+        then waits with \texttt{HAL\_Delay(500)}; stop after 200 toggles. The status line starts with
+        \texttt{D1: toggle=<n>}, and you choose the rest. Before running it, calculate how long the 200 toggles should
+        take; then run it and measure the total time with \texttt{HAL\_GetTick} (read it before the first toggle and
+        after the last). Print the result as \texttt{D1: toggles=200 total=<ms>}. In your report, explain why the total
+        is not exactly 200 $\times$ 500\,ms (hint: think about the UART).
+  \item Blink LD2 at a rate set by a global variable, declared exactly as
+        \texttt{volatile uint32\_t blinkMs = 500;} (the on time, which is also the off time, in ms). Read it again
+        before every toggle, so that a new value, written in Live Expressions while the program runs, takes effect at
+        once. At every toggle, print \texttt{D2: t=<HAL\_GetTick()> LD2=<0 or 1>}.
   \item Blink RGB LEDs 0 and 1 at different rates: LED~0 at 1\,Hz and LED~1 at 1.3\,Hz (one blink = one on and one
-        off). Do it twice: first with \texttt{HAL\_Delay}, then without blocking, with \texttt{HAL\_GetTick}. In each
-        version, measure with \texttt{HAL\_GetTick} how long each LED takes to complete 10 blinks. Before running,
-        calculate the theoretical times. In your report, compare the measured and the calculated times of each LED
-        in both versions, and explain the differences.
+        off). Do it twice: first with \texttt{HAL\_Delay} (task 43), then without blocking, with \texttt{HAL\_GetTick}
+        (task 44). In each version, measure with \texttt{HAL\_GetTick} how long each LED takes to complete 10 blinks,
+        from the start of a blink to the start of the 11th, and keep measuring while the task runs. Print each
+        measurement as \texttt{D3: led=0 ms=<time of 10 blinks>} (or \texttt{led=1}). Before running, calculate the
+        theoretical times. In your report, compare the measured and the calculated times of each LED in both versions,
+        and explain the differences.
 \end{enumerate}
-Put D.1 to D.3 in one program, and select what runs by changing global variables in Live Expressions. In your
-report, explain exactly how to operate it: which variables to change, to which values and in what order, to start
-D.1, D.2 and D.3.
 
 \paragraph{Part E: Integration and logic.}
 Write a program with an \emph{armed} state that button~0 toggles: each press arms or disarms the system. The trigger
@@ -340,11 +441,14 @@ condition is: the system is armed \textbf{and} the IR sensor detects an obstacle
         brightness until they are off.
 \end{itemize}
 Set the brightness of all LEDs with \texttt{setRGB(v, v, v)} ($v$ = 0 to 255). Pace the steps with
-\texttt{HAL\_GetTick}, so that the inputs are read on every pass of the loop. In your report, give the truth table of
-the trigger condition, and draw the behaviour as a state diagram. A creativity bonus applies here.
+\texttt{HAL\_GetTick}, so that the inputs are read on every pass of the loop. Print a line whenever \emph{armed} or the
+obstacle changes, and when a brightening reaches full brightness or a dimming reaches off:
+\texttt{E: armed=1 obstacle=1 v=255}. In your report, give the truth table of the trigger condition, and draw the
+behaviour as a state diagram. A creativity bonus applies here.
 
-\noindent\textbf{Video:} \texttt{V\_E}, showing the program in action. Show every case: arming and disarming, an
-obstacle while armed and while disarmed, a full brightening, and an obstacle removed during the brightening.
+\noindent\textbf{Video:} \texttt{V\_E}, showing the program in action, with PuTTY visible. Show every case: arming and
+disarming, an obstacle while armed and while disarmed, a full brightening, and an obstacle removed during the
+brightening.
 
 \subsection{Assignment 2: ``Wheels in the air''}
 

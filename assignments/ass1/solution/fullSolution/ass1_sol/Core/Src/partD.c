@@ -14,7 +14,7 @@ volatile uint32_t d1Toggles;             /* toggles done so far         */
 volatile uint32_t d1TotalMs;             /* measured total time         */
 
 /* ---------------- D.2 --------------------------------------------- */
-volatile uint32_t d2HalfPeriodMs = 500;  /* LD2 on time = off time      */
+volatile uint32_t blinkMs = 500;         /* LD2 on time = off time, ms  */
 
 /* ---------------- D.3 --------------------------------------------- */
 volatile uint32_t d3FreqMilliHz0 = 1000; /* LED 0: 1 Hz                 */
@@ -31,27 +31,26 @@ void partD1(void)
     {
         HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
         d1Toggles++;
-        /* 58 characters + "\r\n" = 60 characters on the UART */
-        printf("D.1 toggle %3lu of 200   t = %6lu ms   LD2 = %u  status OK\r\n",
+        /* about 58 to 60 characters + "\r\n" on the UART */
+        printf("D1: toggle=%lu of 200, elapsed t=%6lu ms, LD2=%u, status OK\r\n",
                d1Toggles, HAL_GetTick() - start,
                (unsigned)HAL_GPIO_ReadPin(LD2_GPIO_Port, LD2_Pin));
         HAL_Delay(500);
     }
     d1TotalMs = HAL_GetTick() - start;
-
-    printf("D.1: %lu toggles took %lu ms (%lu x 500 ms = %lu ms)\r\n",
-           d1Toggles, d1TotalMs, d1Toggles, d1Toggles * 500);
-
-    while (task == TASK_D1) { }
+    printf("D1: toggles=%lu total=%lu\r\n", d1Toggles, d1TotalMs);
+    taskDone(TASK_D1);
 }
 
-/* D.2: the blink rate follows d2HalfPeriodMs, read again every half period */
+/* D.2: the blink rate follows blinkMs, read again before every toggle */
 void partD2(void)
 {
     while (task == TASK_D2)
     {
         HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        HAL_Delay(d2HalfPeriodMs);
+        printf("D2: t=%lu LD2=%u\r\n", HAL_GetTick(),
+               (unsigned)HAL_GPIO_ReadPin(LD2_GPIO_Port, LD2_Pin));
+        HAL_Delay(blinkMs);
     }
 }
 
@@ -78,11 +77,10 @@ static void blinkerToggle(Blinker *b, volatile uint32_t *result)
         b->startTick = tick;
     }
     b->toggles++;
-
     if (b->toggles == 21)
     {
         *result = tick - b->startTick;
-        printf("LED %u: 10 blinks took %lu ms\r\n", b->led, *result);
+        printf("D3: led=%u ms=%lu\r\n", b->led, *result);
         b->toggles = 1;                     /* this toggle starts the  */
         b->startTick = tick;                /* next measurement        */
     }
@@ -105,7 +103,6 @@ void partD3Delay(void)
     {
         blinkerToggle(&led0, &d3Led0Ms);
         HAL_Delay((halfPeriodUs(d3FreqMilliHz0) + 500) / 1000);   /* 500 ms */
-
         blinkerToggle(&led1, &d3Led1Ms);
         HAL_Delay((halfPeriodUs(d3FreqMilliHz1) + 500) / 1000);   /* 385 ms */
     }

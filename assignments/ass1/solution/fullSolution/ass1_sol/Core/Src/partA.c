@@ -17,11 +17,11 @@ volatile uint8_t  a1U8;                  /* watch these three in Live   */
 volatile int8_t   a1I8;                  /* Expressions                 */
 volatile uint16_t a1U16;
 
-volatile uint8_t  a1StartU8  = 248;      /* start close to each limit,  */
-volatile int8_t   a1StartI8  = 124;      /* so the wrap comes within a  */
-volatile uint16_t a1StartU16 = 65530;    /* few steps                   */
-volatile uint32_t a1StepMs      = 500;   /* time between steps          */
-volatile uint32_t a1WrapPauseMs = 3000;  /* extra pause after a wrap    */
+#define A1_START_U8    250u              /* the start values and steps  */
+#define A1_START_I8    120               /* the instructions prescribe: */
+#define A1_START_U16   65530u            /* u8 and u16 wrap at step 6,  */
+#define A1_STEPS       12u               /* i8 at step 8                */
+#define A1_STEP_MS     500u
 
 /* ---------------- A.2 --------------------------------------------- */
 volatile uint8_t  a2U8_7F  = 0x7F;
@@ -37,73 +37,57 @@ volatile uint8_t  a3Grade2 = 58;
 volatile uint8_t  a3AvgWrong;            /* integer division: 77        */
 volatile float    a3AvgRight;            /* floating point:   77.5      */
 
-/* one line of A.1: decimal, hex and binary of the three variables */
-static void a1PrintLine(const char *mark)
+/* one line of A.1: decimal, hex and binary of the bits stored in each
+   variable (the cast to uint8_t keeps the 8 bits of the int8_t)        */
+static void a1PrintLine(void)
 {
-    printf("u8 %3u 0x%02X ", a1U8, a1U8);
+    printf("A1: u8=%u 0x%02X ", a1U8, a1U8);
     printBinary(a1U8, 8);
-    printf(" | i8 %4d 0x%02X ", a1I8, (uint8_t)a1I8);   /* 8-bit pattern */
+    printf(" i8=%d 0x%02X ", a1I8, (uint8_t)a1I8);
     printBinary((uint8_t)a1I8, 8);
-    printf(" | u16 %5u 0x%04X ", a1U16, a1U16);
+    printf(" u16=%u 0x%04X ", a1U16, a1U16);
     printBinary(a1U16, 16);
-    printf("%s\r\n", mark);
+    printf("\r\n");
 }
 
 void partA1(void)
 {
-    a1U8  = a1StartU8;
-    a1I8  = a1StartI8;
-    a1U16 = a1StartU16;
-    a1PrintLine("");
+    a1U8  = A1_START_U8;
+    a1I8  = A1_START_I8;
+    a1U16 = A1_START_U16;
+    a1PrintLine();
 
-    while (task == TASK_A1)
+    for (uint8_t step = 0; (step < A1_STEPS) && (task == TASK_A1); step++)
     {
-        HAL_Delay(a1StepMs);
-
-        a1U8++;
+        HAL_Delay(A1_STEP_MS);
+        a1U8++;           /* 255 + 1 = 0                                  */
         a1I8++;           /* 127 + 1: the bit pattern 0x80 reads as -128 */
-        a1U16++;
-
-        /* a value that just passed its limit lands on its minimum */
-        uint8_t wrapped = (a1U8 == 0) || (a1I8 == INT8_MIN) || (a1U16 == 0);
-
-        a1PrintLine(wrapped ? "   << wrap-around" : "");
-        if (wrapped)
-        {
-            HAL_Delay(a1WrapPauseMs);   /* time to look at it */
-        }
+        a1U16++;          /* 65535 + 1 = 0                                */
+        a1PrintLine();
     }
+    taskDone(TASK_A1);
 }
 
-/* one line of A.2 for an unsigned variable */
-static void a2PrintUnsigned(const char *name, uint16_t v, uint8_t nBits)
+/* one line of A.2: hex and bin are the stored bits; raw is the variable
+   given to %X as it is, so a negative value shows its sign extension to
+   32 bits (0xF0 as int8_t gives raw=0xFFFFFFF0)                         */
+static void a2PrintLine(const char *hexLiteral, const char *type, int32_t value,
+                        uint16_t bits, uint8_t nBits)
 {
-    printf("%-22s dec %6u   hex 0x%0*X   bin ", name, v, nBits / 4, v);
-    printBinary(v, nBits);
-    printf("\r\n");
-}
-
-/* one line of A.2 for a signed variable: %X of the variable itself shows
-   the sign extension to 32 bits; the cast shows the stored pattern      */
-static void a2PrintSigned(const char *name, int16_t v, uint8_t nBits)
-{
-    uint16_t pattern = (nBits == 8) ? (uint8_t)v : (uint16_t)v;
-
-    printf("%-22s dec %6d   hex 0x%0*X   bin ", name, v, nBits / 4, pattern);
-    printBinary(pattern, nBits);
-    printf("   (%%X of the value itself: 0x%X)\r\n", v);
+    printf("A2: %s %s dec=%ld hex=0x%0*X bin=", hexLiteral, type, value, nBits / 4, bits);
+    printBinary(bits, nBits);
+    printf(" raw=0x%lX\r\n", (uint32_t)value);
 }
 
 void partA2(void)
 {
-    a2PrintUnsigned("0x7F   as uint8_t", a2U8_7F, 8);
-    a2PrintSigned  ("0x7F   as int8_t",  a2I8_7F, 8);
-    a2PrintUnsigned("0xF0   as uint8_t", a2U8_F0, 8);
-    a2PrintSigned  ("0xF0   as int8_t",  a2I8_F0, 8);
-    a2PrintUnsigned("0xFFF6 as uint16_t", a2U16, 16);
-    a2PrintSigned  ("0xFFF6 as int16_t", a2I16, 16);
-
-    while (task == TASK_A2) { }
+    a2PrintLine("0x7F",   "uint8_t",  a2U8_7F, a2U8_7F,          8);
+    a2PrintLine("0x7F",   "int8_t",   a2I8_7F, (uint8_t)a2I8_7F, 8);
+    a2PrintLine("0xF0",   "uint8_t",  a2U8_F0, a2U8_F0,          8);
+    a2PrintLine("0xF0",   "int8_t",   a2I8_F0, (uint8_t)a2I8_F0, 8);
+    a2PrintLine("0xFFF6", "uint16_t", a2U16,   a2U16,            16);
+    a2PrintLine("0xFFF6", "int16_t",  a2I16,   (uint16_t)a2I16,  16);
+    taskDone(TASK_A2);
 }
 
 void partA3(void)
@@ -117,10 +101,6 @@ void partA3(void)
 
     /* printf without float support: print the tenths by hand */
     uint32_t tenths = (uint32_t)(a3AvgRight * 10.0f + 0.5f);
-
-    printf("grades %u and %u\r\n", a3Grade1, a3Grade2);
-    printf("(g1 + g2) / 2    = %u      (integer division)\r\n", a3AvgWrong);
-    printf("(g1 + g2) / 2.0f = %lu.%lu    (floating point)\r\n", tenths / 10, tenths % 10);
-
-    while (task == TASK_A3) { }
+    printf("A3: wrong=%u right=%lu.%lu\r\n", a3AvgWrong, tenths / 10, tenths % 10);
+    taskDone(TASK_A3);
 }

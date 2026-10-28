@@ -134,9 +134,11 @@ Course-specific technical conclusions belong here or in a document in this folde
   that, not the syllabus's 1000–2000 µs.
 - **4 DC motors + quadrature encoders**, through H-bridges (timer PWM).
 - **IR on/off obstacle sensor** at the front (PA7, active-low): a digital input, later used with EXTI.
-- Power-jumper note (learned 2026-10-01): the Nucleo power-source jumper must be on **5V_STLK** for
-  USB power. On **E5V** the MCU is unpowered, while the ST-LINK still enumerates, which gives
-  "No STM32 target found". Worth putting in the students' troubleshooting notes.
+- Power-jumper note (corrected by Yohai, 2026-10-26): the Nucleo power-source jumper must be on **E5V**,
+  so the board takes its 5 V from the cart (the 2026-10-01 note said 5V_STLK; that was wrong). With the
+  jumper on E5V and the cart's power off, the MCU is unpowered while the ST-LINK still enumerates (USB),
+  which gives "No STM32 target found". In the A1 hardware table, `ass1_sol.tex`, `HowToUse.txt` and the
+  checkBounce/checkBounce2/bounceCheck400 instruction sheets (the `_filled` records keep what was used then).
 
 ### 4.2 Grading (syllabus `syllabus_G474_cart_2026`)
 
@@ -157,10 +159,22 @@ A1 20%, A2 30%, A3 30%.** (A2/A3 changed from 25/35 by Yohai, 2026-10-19.) Each 
 (24.11.2026), Quiz 2 in lecture 9 (29.12.2026; moved from lecture 8 on 2026-10-17). Yohai will probably
 write the quizzes.
 
-**A1 revisions (Yohai, 2026-10-26):** videos only for Parts A, B and E (`V_A12`, `V_B1234`, `V_E`); C and D
-have no video on purpose. C.1 shows the count on button release. D.1 is timed with HAL_GetTick. D.3 = RGB LEDs 0
-and 1 at 1 and 1.3 Hz, 10 blinks timed per LED, compared with the calculation. Part D runs as one program chosen in
-Live Expressions, and the report says how to operate it.
+**A1 revisions (Yohai, 2026-10-26):** D.1 is timed with HAL_GetTick. D.3 = RGB LEDs 0 and 1 at 1 and 1.3 Hz, 10
+blinks timed per LED, compared with the calculation.
+
+**A1 made testable automatically (Yohai, 2026-10-28):** the whole assignment is one program run by
+`volatile uint8_t task` (exact name and type, global), with the solution's numbering: 11 to 13 A, 21 to 23 B, 31 to 36
+C, 41 to 44 D, 51 E. A dispatcher skeleton is in the instructions; protocol: start idle, print `=== task N ===`, check
+`task` every loop pass, `=== task N done ===` for tasks with an end, write 0 then N to rerun, `no task N`. Every result
+goes to PuTTY in a MANDATORY tagged line format (`A1: u8=250 0xFA 0b11111010 ...`, hex padded to the type, binary
+`0b` + all bits). A.1 fixed: start 250 / 120 / 65530, +1 every 500 ms, 12 steps. D.2 variable fixed:
+`volatile uint32_t blinkMs = 500`. B.4 moved to C.1 (buttons held); the counting versions are now C.2 level, C.3
+edge, C.4 debounced, C.5 delay (35 debounced, 36 edge), each with an "Expect ..." hint (much more than 20 / 20 or a
+little more / exactly 20 / much less than 20). Videos only `V_C` and `V_E` (where input is needed); A, B, D are
+checked by an automatic test still to be written: build, flash with STM32_Programmer_CLI (installed on the C: PC),
+write `task`/`blinkMs` over SWD while running, read the COM port (pyserial, not yet installed), parse the lines. Not
+verified yet: writing RAM over SWD while the program runs (hot-plug). Running it flashes boards, so each run needs
+Yohai's OK. The test cannot see the IO-board LEDs (B.2, B.3, D.3 checked in the code).
 
 **Schedule as of 2026-10-17 (Yohai):** A1 out session 2, due session 5. A2 out session 7 (15.12),
 due session 10 (5.1.2027) (both moved one week later). **"Last material included" rule:** an
@@ -342,12 +356,13 @@ assignments/ass1/solution/     TA-ONLY, never handed to students. checkBounce/ =
                                ass1.ioc; renamed ass1_sol), students' io_board.c/h unchanged, one
                                file per part (partA.c to partE.c), bits.c (B.1), ass1_common.c,
                                ass1_tasks.c (dispatcher). Everything runs in one program: the global
-                               `task` chosen in Live Expressions (11 = A.1 ... 51 = E; 34/35 = C.4
-                               debounced/edge, 43/44 = D.3 HAL_Delay/HAL_GetTick). ass1_sol.tex =
+                               `task` chosen in Live Expressions (11 = A.1 ... 51 = E; 35/36 = C.5
+                               debounced/edge, 43/44 = D.3 HAL_Delay/HAL_GetTick), printing the
+                               mandatory tagged lines (2026-10-28). ass1_sol.tex =
                                TA report: how to run every task in Live Expressions, answers,
-                               expected numbers, grading notes. Syntax-checked with host GCC only;
-                               NOT yet built with the ARM toolchain or run on the board (do it on
-                               the C: PC). Choices in it: E brightens again if the condition
+                               expected lines and numbers, grading notes. Built with the CubeIDE
+                               toolchain, 0 warnings (2026-10-28); NOT yet run on the board.
+                               Choices in it: E brightens again if the condition
                                returns while dimming; D.3 deadlines kept in us so 1.3 Hz gives
                                7692 ms, not 7700
 tutorials/MP_tutorials_2026.pptx    all tutorials in one deck, one section per tutorial; the export

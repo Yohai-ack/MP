@@ -10,18 +10,22 @@
 #include "io_board.h"
 #include <stdio.h>
 
-/* print the lowest nBits of value, MSB first, with a '_' every 4 bits
+/* print "0b" and the lowest nBits of value, MSB first
    (printf has no %b, so the bits are tested one by one)                */
 void printBinary(uint32_t value, uint8_t nBits)
 {
+    printf("0b");
     for (int8_t i = (int8_t)(nBits - 1); i >= 0; i--)
     {
         putchar(bitTest(value, (uint8_t)i) ? '1' : '0');
-        if ((i % 4 == 0) && (i != 0))
-        {
-            putchar('_');
-        }
     }
+}
+
+/* the end of a task that has an end: report it, then wait for a new choice */
+void taskDone(uint8_t myTask)
+{
+    printf("=== task %u done ===\r\n", myTask);
+    while (task == myTask) { }
 }
 
 /* light the RGB LEDs from a byte: LED n is white while bit n is 1 */
@@ -34,14 +38,14 @@ void showByteOnLeds(uint8_t pattern)
     }
 }
 
-/* B.4: the raw button byte is active-low (0 = pressed) on bits 0..3.
+/* C.1: the raw button byte is active-low (0 = pressed) on bits 0..3.
    Invert it, then mask off bits 4..7, which carry no button.          */
 uint8_t readButtonsHeld(void)
 {
     return (uint8_t)(~readButtonsRaw()) & 0x0Fu;
 }
 
-/* C.3 and E: accept a new level only after it has been stable for
+/* C.4 and E: accept a new level only after it has been stable for
    stableMs. Returns 1 once, at the moment a press (level 1) is accepted. */
 uint8_t debounceUpdate(Debouncer *d, uint8_t sample, uint32_t tick, uint32_t stableMs)
 {

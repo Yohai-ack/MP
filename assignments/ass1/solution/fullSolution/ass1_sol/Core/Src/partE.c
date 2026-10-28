@@ -24,8 +24,6 @@
 
 typedef enum { E_OFF, E_RISING, E_DONE, E_FALLING } EState;
 
-static const char *const stateName[] = { "OFF", "RISING", "DONE", "FALLING" };
-
 volatile uint8_t  eArmed;                /* toggled by button 0         */
 volatile uint8_t  eObstacle;             /* IR sensor sees an obstacle  */
 volatile uint8_t  eCondition;            /* armed AND obstacle          */
@@ -41,14 +39,16 @@ static void eShowLevel(void)
     setRGB(v, v, v);
 }
 
+/* the E: line, printed when armed or the obstacle changes, and when a
+   brightening reaches full or a dimming reaches off                   */
+static void ePrintLine(void)
+{
+    printf("E: armed=%u obstacle=%u v=%u\r\n", eArmed, eObstacle, eLevel);
+}
+
 static void eSetState(EState s)
 {
-    if (s != eState)
-    {
-        eState = s;
-        printf("armed %u  obstacle %u  -> %s (level %u)\r\n",
-               eArmed, eObstacle, stateName[s], eLevel);
-    }
+    eState = s;
 }
 
 void partE(void)
@@ -60,7 +60,9 @@ void partE(void)
     eLevel = 0;
     eState = E_OFF;
     eShowLevel();
-    printf("E: disarmed. Button 0 arms and disarms.\r\n");
+    eObstacle = (HAL_GPIO_ReadPin(IR_SENSOR_GPIO_Port, IR_SENSOR_Pin) == GPIO_PIN_RESET);
+    printf("Button 0 arms and disarms.\r\n");
+    ePrintLine();
 
     while (task == TASK_E)
     {
@@ -71,9 +73,14 @@ void partE(void)
         {
             eArmed = !eArmed;
             HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, eArmed ? GPIO_PIN_SET : GPIO_PIN_RESET);
-            printf("%s\r\n", eArmed ? "armed (LD2 on)" : "disarmed");
+            ePrintLine();
         }
-        eObstacle  = (HAL_GPIO_ReadPin(IR_SENSOR_GPIO_Port, IR_SENSOR_Pin) == GPIO_PIN_RESET);
+        uint8_t obstacle = (HAL_GPIO_ReadPin(IR_SENSOR_GPIO_Port, IR_SENSOR_Pin) == GPIO_PIN_RESET);
+        if (obstacle != eObstacle)
+        {
+            eObstacle = obstacle;
+            ePrintLine();
+        }
         eCondition = eArmed && eObstacle;
 
         /* transitions that depend only on the condition */
@@ -100,6 +107,10 @@ void partE(void)
                 else
                 {
                     eLevel = (eLevel > 255 - eStepSize) ? 255 : eLevel + eStepSize;
+                    if (eLevel == 255)
+                    {
+                        ePrintLine();           /* full brightness      */
+                    }
                 }
                 eShowLevel();
             }
@@ -109,6 +120,7 @@ void partE(void)
                 if (eLevel == 0)
                 {
                     eSetState(E_OFF);
+                    ePrintLine();               /* dimmed to off        */
                 }
                 eShowLevel();
             }

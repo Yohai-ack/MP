@@ -13,8 +13,9 @@ Nothing moves until you change 'state'. After reset, state = 0 (idle).
 ===================
 - Put the cart ON A BLOCK, wheels in the air. States 5 to 12 and 16 spin the
   wheels.
-- Nucleo power jumper on 5V_STLK when powered from USB. (On E5V the MCU is
-  unpowered and the debugger reports "No STM32 target found".)
+- Nucleo power jumper on E5V (the board takes its 5 V from the cart). If the
+  cart's power is off, the MCU is unpowered and the debugger reports
+  "No STM32 target found".
 - Turn the cart's battery/motor power on for the wheel tests (5 to 12, 16) and
   for the servo (1 to 3).
 - Keep the front IR sensor clear. Any NEW obstacle in front of it sets

@@ -34,7 +34,7 @@ PART 1: SETUP (once)
 1. Hardware
    - Cart with the IO board connected, as for the hardware test.
    - USB cable from the Nucleo to the PC.
-   - Power jumper on the Nucleo: 5V_STLK.
+   - Power jumper on the Nucleo: E5V (5 V from the cart; cart power on).
 
 2. Open the project in STM32CubeIDE
    - File > Import > General > Existing Projects into Workspace > Next.
