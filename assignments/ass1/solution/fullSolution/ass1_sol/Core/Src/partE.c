@@ -33,17 +33,23 @@ volatile uint32_t eStepMs   = 40;        /* 51 steps of 5: about 2 s    */
 volatile uint8_t  eStepSize = 5;
 volatile uint8_t  eUseGamma = 1;         /* 1: even steps to the eye    */
 
+/* the value given to setRGB for the current level */
+static uint8_t eValue(void)
+{
+    return eUseGamma ? gamma2(eLevel) : eLevel;
+}
+
 static void eShowLevel(void)
 {
-    uint8_t v = eUseGamma ? gamma2(eLevel) : eLevel;
+    uint8_t v = eValue();
     setRGB(v, v, v);
 }
 
 /* the E: line, printed when armed or the obstacle changes, and when a
-   brightening reaches full or a dimming reaches off                   */
+   brightening reaches full or a dimming reaches off; v = setRGB value */
 static void ePrintLine(void)
 {
-    printf("E: armed=%u obstacle=%u v=%u\r\n", eArmed, eObstacle, eLevel);
+    printf("E: armed=%u obstacle=%u v=%u\r\n", eArmed, eObstacle, eValue());
 }
 
 static void eSetState(EState s)

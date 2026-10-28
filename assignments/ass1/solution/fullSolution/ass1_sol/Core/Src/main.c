@@ -47,7 +47,7 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef hlpuart1;
 
 /* USER CODE BEGIN PV */
-
+volatile uint8_t task = 0;   /* the task that runs: change it in Live Expressions */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,11 +110,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    ass1Run();        /* runs the task chosen in `task` until it changes */
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    ass1Run();        /* runs the task chosen in `task` until it changes */
   }
   /* USER CODE END 3 */
 }

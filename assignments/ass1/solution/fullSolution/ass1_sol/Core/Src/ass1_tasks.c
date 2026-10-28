@@ -14,8 +14,6 @@
 #include "io_board.h"
 #include <stdio.h>
 
-volatile uint8_t task = 0;   /* the task that runs: change it in Live Expressions */
-
 void printMenu(void)
 {
     printf("\r\nAssignment 1 solution. Write a number into `task` (Live Expressions):\r\n");

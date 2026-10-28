@@ -21,10 +21,14 @@ void printBinary(uint32_t value, uint8_t nBits)
     }
 }
 
-/* the end of a task that has an end: report it, then wait for a new choice */
+/* the end of a task that has an end: report it, then wait for a new choice
+   (a task stopped early by a new choice is not reported as done)           */
 void taskDone(uint8_t myTask)
 {
-    printf("=== task %u done ===\r\n", myTask);
+    if (task == myTask)
+    {
+        printf("=== task %u done ===\r\n", myTask);
+    }
     while (task == myTask) { }
 }
 

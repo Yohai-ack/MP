@@ -275,7 +275,7 @@ Rules for the program:
 Start from this skeleton. Write one function per task, and add a \texttt{case} for each one:
 \begin{lstlisting}
 /* in the while (1) loop of main(), USER CODE BEGIN 3 */
-uint8_t current = task;
+uint8_t current = task;   /* a local copy for this pass (not a global, so not in PV) */
 if (current != 0)
 {
     printf("=== task %u ===\r\n", current);
@@ -312,7 +312,8 @@ void taskB2(void)
 \end{lstlisting}
 
 \paragraph{Printing the results: the line formats are MANDATORY.}
-Every result is printed to PuTTY. A result line starts with the tag of its item (\texttt{A1:}, \texttt{B2:}, and so
+Every result is printed to PuTTY. Watching variables in Live Expressions is not required, but it is recommended
+for debugging: add the variables you want to follow, and see them change while the program runs. A result line starts with the tag of its item (\texttt{A1:}, \texttt{B2:}, and so
 on), followed by the fields exactly as shown in each item, separated by single spaces, and ends with
 \texttt{\textbackslash r\textbackslash n}. Write numbers in decimal, unless the field shows otherwise. Write hex as
 \texttt{0x} with capital letters and all the digits of the type (\texttt{0x0A}, \texttt{0x00FF}), and binary as
@@ -326,7 +327,7 @@ as long as they do not start with a tag.
         after each step; stop after 12 steps (13 lines in all). Each line:\\
         {\footnotesize\texttt{A1: u8=250 0xFA 0b11111010 i8=120 0x78 0b01111000 u16=65530 0xFFFA 0b1111111111111010}}\\
         The hex and binary fields show the bits stored in the variable: 8 bits for \texttt{u8} and \texttt{i8}, 16
-        for \texttt{u16}. Also watch the three variables in Live Expressions while the task runs.
+        for \texttt{u16}.
         \textbf{Note:} the C library used with STM32CubeIDE supports the standard format specifiers, such as
         \texttt{\%d}, \texttt{\%u}, \texttt{\%x} and \texttt{\%o}, but it has no standard \texttt{\%b} specifier for
         binary output, so write your own function for it.
@@ -427,7 +428,8 @@ combinations of buttons, and in C.2 to C.5 a few presses each (not all 20).
         from the start of a blink to the start of the 11th, and keep measuring while the task runs. Print each
         measurement as \texttt{D3: led=0 ms=<time of 10 blinks>} (or \texttt{led=1}). Before running, calculate the
         theoretical times. In your report, compare the measured and the calculated times of each LED in both versions,
-        and explain the differences.
+        and explain the differences. Then answer: can the two rates be produced exactly with \texttt{HAL\_Delay}
+        alone? Explain.
 \end{enumerate}
 
 \paragraph{Part E: Integration and logic.}

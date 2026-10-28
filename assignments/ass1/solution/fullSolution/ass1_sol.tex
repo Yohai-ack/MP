@@ -37,7 +37,8 @@ File & Content \\
 \texttt{ass1\_sol/} & the STM32CubeIDE project \\
 \texttt{ass1\_sol/ass1\_sol.ioc} & \texttt{ass1.ioc}, unchanged except the project name \\
 \texttt{Core/Src/main.c} & generated code; the user code adds \texttt{\_\_io\_putchar} (printf to PuTTY, tutorial~2),
-  \texttt{ioBoardInit()}, and calls the task dispatcher in the main loop \\
+  \texttt{ioBoardInit()}, declares \lv{task} (\texttt{USER CODE BEGIN PV}, as the instructions require), and calls
+  the task dispatcher in the main loop (\texttt{USER CODE BEGIN 3}) \\
 \texttt{Core/Src/io\_board.c}, \texttt{Core/Inc/io\_board.h} & the students' copy, unchanged \\
 \texttt{Core/Inc/ass1.h} & task numbers and shared helpers \\
 \texttt{Core/Src/ass1\_tasks.c} & the dispatcher: runs the task chosen in \lv{task} \\
@@ -59,7 +60,7 @@ File & Content \\
         \emph{Resume} (F8). PuTTY shows the IO board report of \texttt{ioBoardInit()} (all four chips ``found'') and the
         task menu.
   \item Open \emph{Window $\to$ Show View $\to$ Live Expressions}, and add \lv{task} with \emph{Add new expression}.
-        Add the other variables named in each part below.
+        Other variables may be added for debugging; it is not required.
 \end{enumerate}
 
 \subsection{Choosing a task}
@@ -95,7 +96,7 @@ Every result line starts with its tag (\texttt{A1:}, \texttt{B2:}, \ldots) in th
 the ``What you see'' blocks below show these lines.
 
 \smallskip\noindent
-Live Expressions shows a value in decimal by default; for the bit patterns of Parts A and B, right-click the
+When watching variables for debugging: Live Expressions shows a value in decimal by default; for the bit patterns of Parts A and B, right-click the
 expression and choose another number format (hex or binary), where the view offers it. An \texttt{enum} variable
 (\lv{eState}) is shown by name.
 
@@ -118,7 +119,10 @@ void printBinary(uint32_t value, uint8_t nBits)   // printf has no %b
 
 void taskDone(uint8_t myTask)                     // the end of a task that has an end
 {
-    printf("=== task %u done ===\r\n", myTask);
+    if (task == myTask)                           // not when stopped early by a new choice
+    {
+        printf("=== task %u done ===\r\n", myTask);
+    }
     while (task == myTask) { }
 }
 
@@ -142,7 +146,7 @@ One LED update by \texttt{showByteOnLeds} is 24 I2C writes, about 2\,ms at 400\,
 \section{Part A: variable types, signed and unsigned, wrap-around}
 
 \subsection*{A.1}
-\run{Add \lv{a1U8}, \lv{a1I8}, \lv{a1U16}. Write \lv{task} = 11. The three variables start at 250, 120 and 65530 (the
+\run{Write \lv{task} = 11. The three variables start at 250, 120 and 65530 (the
 values the instructions prescribe) and grow by one every 500\,ms; after the start line and 12 steps the task is done.}
 
 \see{13 lines. Selected ones: the start, steps 5 to 8 (u8 and u16 wrap at step 6, i8 at step 8) and step 12:}
@@ -169,8 +173,7 @@ carry out of the top bit, which has no place to go and is lost, so the result is
 The binary output shows it directly: the same 8 bits, read as unsigned or signed.
 
 \subsection*{A.2}
-\run{Write \lv{task} = 12. The six lines are printed once. The six variables (\lv{a2U8\_7F}, \lv{a2I8\_7F}, \lv{a2U8\_F0},
-\lv{a2I8\_F0}, \lv{a2U16}, \lv{a2I16}) can also be watched in Live Expressions.}
+\run{Write \lv{task} = 12. The six lines are printed once.}
 
 \see{}
 \begin{lstlisting}[language={},basicstyle=\ttfamily\scriptsize]
@@ -198,7 +201,7 @@ prints all 32 bits. Casting to the unsigned type of the same width, \texttt{(uin
 from 240 to $-16$''): the constant 240 does not fit. The solution writes \texttt{(int8\_t)0xF0} to say it is meant.
 
 \subsection*{A.3}
-\run{Write \lv{task} = 13. Watch \lv{a3AvgWrong} and \lv{a3AvgRight}. To try other grades, change \lv{a3Grade1},
+\run{Write \lv{task} = 13. To try other grades, change \lv{a3Grade1},
 \lv{a3Grade2}, then write \lv{task} = 0 and 13.}
 
 \see{\texttt{A3: wrong=77 right=77.5}}
@@ -215,8 +218,7 @@ $97 + 58 = 155$ is computed in 32 bits (storing it in a \texttt{uint8\_t} would 
 
 \emph{Printing a float:} with the default newlib-nano library, \texttt{printf("\%f")} prints nothing until
 \emph{Project Properties $\to$ C/C++ Build $\to$ Settings $\to$ MCU Settings $\to$ ``Use float with printf from
-newlib-nano''} is ticked. The solution avoids it and prints the tenths by hand; Live Expressions shows
-\lv{a3AvgRight} = 77.5 either way.
+newlib-nano''} is ticked. The solution avoids it and prints the tenths by hand.
 
 \section{Part B: bit operations and shifting}
 
@@ -243,8 +245,8 @@ bit~5 only, and writes it back, so the other pins of port~A keep their levels.
 \begin{lstlisting}
 b2Pattern = (uint8_t)((b2Pattern << 1) | (b2Pattern >> 7));   // rotate left by one
 \end{lstlisting}
-\run{Write \lv{task} = 22 (B.2, starts from \texttt{0x01}) or 23 (B.3, starts from \texttt{0x03}). Watch
-\lv{b2Pattern}. One step per second, forever, until \lv{task} changes.}
+\run{Write \lv{task} = 22 (B.2, starts from \texttt{0x01}) or 23 (B.3, starts from \texttt{0x03}). One step per
+second, forever, until \lv{task} changes.}
 
 \see{B.2: \texttt{B2: 0b00000001}, \texttt{B2: 0b00000010}, \ldots, \texttt{B2: 0b10000000}, \texttt{B2: 0b00000001},
 \ldots\ B.3: \texttt{B3: 0b00000011}, \texttt{B3: 0b00000110}, \ldots, \texttt{B3: 0b11000000}, \texttt{B3: 0b10000001}
@@ -259,7 +261,7 @@ are lit by \texttt{showByteOnLeds}, which tests each bit.
 \section{Part C: input triggering}
 
 \subsection*{C.1 Buttons held}
-\run{Write \lv{task} = 31. Watch \lv{c1Raw}, \lv{c1Held} and \lv{c1Count}. Hold any combination of the four buttons.}
+\run{Write \lv{task} = 31. Hold any combination of the four buttons.}
 
 \see{At the start: \texttt{C1: raw=0b11111111 held=0b00000000 count=0}. With button~0 held:
 \texttt{C1: raw=0b11111110 held=0b00000001 count=1}. With buttons 0 and 2: \texttt{held=0b00000101 count=2}. A line is
@@ -270,7 +272,7 @@ the PCA9538A carry no button; after the inversion they may be 0 or 1, so \texttt
 the sum of \texttt{bitTest(held, n)} for $n = 0$ to 3.
 
 \subsection*{C.2 to C.5: counting presses}
-\run{In every version, watch \lv{cCount}. The count is shown on the 8 LEDs (its lowest 8 bits) and printed only when it
+\run{In every version, the count is shown on the 8 LEDs (its lowest 8 bits) and printed only when it
 changes, as \texttt{C2: count=<n>} (with the tag of the item). To start a new round of 20 presses, write \lv{cReset} = 1
 (it returns to 0 by itself, and the count to 0). Write \lv{task} = 32, 33, 34, 35 or 36 for C.2, C.3, C.4, C.5
 (debounced) and C.5 (edge). \lv{cDebounceMs} = 20 and \lv{cDelayMs} = 150 can be changed while it runs. The hint in the
@@ -283,7 +285,7 @@ if (now) cCount++;                       // every pass while held
 if (before && !now) showCount();         // shown once, when the button is released
 before = now;
 \end{lstlisting}
-Also watch \lv{cLoopsPerSec}, printed once a second as \texttt{C2: passes=<n>}.
+The loop passes per second are printed once a second as \texttt{C2: passes=<n>}.
 
 \textbf{Expected.} About 9\,000 loop passes per second: one pass is one I2C read of the button chip, about
 110\,$\mu$s. A press of about 150\,ms adds about $0.15 \times 9000 \approx 1\,350$, so 20 presses give a count of
@@ -349,11 +351,10 @@ C.5 edge + delay & & & & about 11 \\
 \end{tabularx}
 
 \section{Part D: LED blinking and timing}
-\run{Part D is one program with the rest. D.1: write \lv{task} = 41; watch \lv{d1Toggles} and \lv{d1TotalMs}; it
+\run{Part D is one program with the rest. D.1: write \lv{task} = 41; it
 stops by itself after 200 toggles, and prints the total as \texttt{D1: toggles=200 total=<ms>}. D.2: write \lv{task} = 42, then change
 \lv{blinkMs} (default 500) while LD2 blinks; each toggle prints \texttt{D2: t=<tick> LD2=<0 or 1>}. D.3: write \lv{task} = 43 (\texttt{HAL\_Delay}) or 44
-(\texttt{HAL\_GetTick}); watch \lv{d3Led0Ms} and \lv{d3Led1Ms}, which hold the last measured time for 10 blinks of
-each LED, also printed as \texttt{D3: led=0 ms=<n>} (or \texttt{led=1}). The rates are \lv{d3FreqMilliHz0} = 1000 and \lv{d3FreqMilliHz1} = 1300 (in mHz).}
+(\texttt{HAL\_GetTick}); the time of every 10 blinks of each LED is printed as \texttt{D3: led=0 ms=<n>} (or \texttt{led=1}). The rates are \lv{d3FreqMilliHz0} = 1000 and \lv{d3FreqMilliHz1} = 1300 (in mHz).}
 
 \subsection*{D.1}
 \begin{lstlisting}
@@ -409,13 +410,37 @@ blinks are 20 passes. \textbf{Answer:} with blocking delays the two LEDs cannot 
 waits for one LED while the other one is due, so both LEDs blink at the rate set by the sum of the delays, 0.56\,Hz
 instead of 1 and 1.3\,Hz.
 
+\paragraph{Report question: can the two rates be produced exactly with \texttt{HAL\_Delay} alone?}
+\textbf{Answer: approximately yes, exactly no.} The half periods are 500\,ms and $5000/13 = 384.615$\,ms, in the ratio
+13\,:\,10. A common base step that fits both a whole number of times is $500/13 = 38.46$\,ms: a loop with one short
+delay per pass and two counters toggles LED~0 every 13 passes and LED~1 every 10 passes.
+\begin{lstlisting}
+HAL_Delay(37);                                   // one pass: about 38 ms (HAL_Delay adds one tick)
+if (++count0 == 13) { count0 = 0; toggle LED 0; }
+if (++count1 == 10) { count1 = 0; toggle LED 1; }
+\end{lstlisting}
+The ratio of the two rates is then exactly 1.3, but both are off by the error of the base step:
+\begin{itemize}
+  \item 38.46\,ms is not a whole number of ticks. A pass of 38\,ms gives 9\,880 and 7\,600\,ms for 10 blinks (1.012 and
+        1.316\,Hz); a pass of 39\,ms (\texttt{HAL\_Delay(38)}) gives 10\,140 and 7\,800\,ms (0.986 and 1.282\,Hz), about
+        1.2\% either way. Alternating 38 and 39\,ms passes (7 of 38 and 6 of 39 make 500) brings the average right.
+  \item Each \texttt{HAL\_Delay(n)} waits from $n$ to $n + 1$ ticks, depending on where in the tick it is called, and the
+        work in the pass (3 I2C writes per toggle, about 0.25\,ms) adds to it. A program that only waits never reads a
+        clock, so it cannot see these errors, and they add up from pass to pass without limit.
+\end{itemize}
+Exact long-term rates need a clock: \texttt{HAL\_GetTick} deadlines advanced by the period (task 44) keep every toggle
+within one tick of its ideal time, forever. Accept any answer that finds the common step (or a merged timeline of the
+46 toggles in 10\,s) and explains why it is still not exact: whole-ms steps, the extra tick, the time of the work.
+
 \paragraph{With \texttt{HAL\_GetTick} (task 44).}
 \begin{lstlisting}
 uint32_t nowUs = HAL_GetTick() * 1000u;
 if ((int32_t)(nowUs - next0) >= 0) { blinkerToggle(&led0, &d3Led0Ms); next0 += 500000; }
 if ((int32_t)(nowUs - next1) >= 0) { blinkerToggle(&led1, &d3Led1Ms); next1 += 384615; }
 \end{lstlisting}
-\textbf{Expected:} LED~0 10\,000\,ms, LED~1 7\,692 or 7\,693\,ms (within 1\,ms of the theory).
+\textbf{Expected:} LED~0 10\,000\,ms, LED~1 7\,692 or 7\,693\,ms, each within about 2\,ms of the theory: one tick,
+plus the \texttt{D3:} line that the other LED may be printing (about 20 characters, 1.7\,ms on the UART) when a
+toggle is due. The deadlines are not moved by that delay, so it does not add up.
 \textbf{Answer:} each LED has its own deadline, and the loop never waits, so each LED toggles within one tick of its
 deadline, whatever the other does. Three details decide the accuracy, and are the differences students are expected
 to find:
@@ -440,14 +465,15 @@ wraps (Part~A again).
 Theory & 10\,000\,ms & 7\,692\,ms & 10 periods \\
 \texttt{HAL\_Delay} & about 17\,740\,ms & about 17\,740\,ms & both delays in every pass \\
 \texttt{HAL\_GetTick}, ms deadlines & 10\,000\,ms & 7\,700\,ms & 385 instead of 384.6\,ms \\
-\texttt{HAL\_GetTick}, $\mu$s deadlines (this solution) & 10\,000\,ms & 7\,692\,ms & within one tick \\
+\texttt{HAL\_GetTick}, $\mu$s deadlines (this solution) & 10\,000\,ms & 7\,692\,ms & within about 2\,ms \\
 \bottomrule
 \end{tabularx}
 
 \section{Part E: integration and logic}
-\run{Write \lv{task} = 51. Watch \lv{eArmed}, \lv{eObstacle}, \lv{eCondition}, \lv{eState} and \lv{eLevel}. Button~0
-arms and disarms (LD2 is on while armed). PuTTY shows \texttt{E: armed=<0|1> obstacle=<0|1> v=<level>} whenever
-\emph{armed} or the obstacle changes, and when a brightening reaches 255 or a dimming reaches 0. Hold a hand in front of the IR sensor for an obstacle. \lv{eStepMs} = 40 and
+\run{Write \lv{task} = 51. Button~0
+arms and disarms (LD2 is on while armed). PuTTY shows \texttt{E: armed=<0|1> obstacle=<0|1> v=<value>} whenever
+\emph{armed} or the obstacle changes, and when a brightening reaches 255 or a dimming reaches 0 (\texttt{v} is the
+value given to \texttt{setRGB}, after \texttt{gamma2}). Hold a hand in front of the IR sensor for an obstacle. \lv{eStepMs} = 40 and
 \lv{eStepSize} = 5 give 51 steps of 40\,ms, about 2\,s from off to full; \lv{eUseGamma} = 1 makes the steps look even
 to the eye (\texttt{gamma2} of \texttt{io\_board.h}), 0 gives linear values.}
 
