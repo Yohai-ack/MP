@@ -8,6 +8,8 @@ Writes into <repo>/export (git-ignored, rebuilt from scratch on every run):
     export/MP2026_plan.docx           Word copy of the full plan (tex2word skill)
     export/coursePolicies.pdf         "Course policies" section only, red flags removed
     export/assN/assN_instructions.pdf one assignment section, red flags removed
+    export/quizzes/quizN_en.pdf       one quiz, student version (no solutions), from the plan
+    export/quizzes/quizN_he.pdf       the same in Hebrew, from the quiz's %HE lines in the plan (lualatex)
     export/assN/<provided files>      top-level files of assignments/assN (never solution/)
     export/tutorials/<one pdf per section of tutorials/MP_tutorials_2026.pptx>
 
@@ -77,10 +79,54 @@ def student_doc(preamble, content, top):
             + "\n\\end{document}\n")
 
 
-def pdflatex(tex_path, out_pdf):
+def strip_solutions(tex):
+    """The student version of a quiz: no solution environments, no \\correct marks, and room to write
+    where the source has \\answerspace."""
+    tex = re.sub(r"\\begin\{solution\}.*?\\end\{solution\}\n?", "", tex, flags=re.S)
+    tex = re.sub(r"\\correct\b", "", tex)
+    return tex
+
+
+def hebrew_lines(sec):
+    """The Hebrew version kept in a quiz section of the plan: its lines start with "%HE " (comments for
+    pdflatex and for the Word copy). Returns (the section without them, the Hebrew body or None)."""
+    keep, he = [], []
+    for line in sec.split("\n"):
+        if line.startswith("%HE"):
+            he.append(line[4:] if line.startswith("%HE ") else "")
+        else:
+            keep.append(line)
+    return "\n".join(keep), ("\n".join(he) if he else None)
+
+
+# the preamble of the Hebrew quizzes (lualatex); their text is only in the plan
+HEBREW_PREAMBLE = r"""\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage[bidi=basic, layout=lists.tabular]{babel}
+\babelprovide[main, import]{hebrew}
+\babelprovide[import]{english}
+\babelfont[hebrew]{rm}{David}
+\usepackage{booktabs,enumitem,xcolor,listings}
+\lstset{language=C, basicstyle=\ttfamily\small, columns=fullflexible, keepspaces=true, upquote=true, showstringspaces=false, frame=single, xleftmargin=1em, xrightmargin=1em}
+\setlist{nosep}
+\newcommand{\flag}[1]{\textcolor{red}{[#1]}}
+\newcommand{\correct}{\quad\textcolor{green!50!black}{\textbf{[נכון]}}}
+\newenvironment{solution}{\par\noindent\ignorespaces}{\par}
+\newcommand{\answerspace}[1]{}
+\newcommand{\en}[1]{\babelsublr{\foreignlanguage{english}{#1}}}
+\newcommand{\code}[1]{\babelsublr{\foreignlanguage{english}{\texttt{#1}}}}
+\newenvironment{codeblock}{\begin{otherlanguage}{english}}{\end{otherlanguage}}
+"""
+
+
+STUDENT_QUIZ = ("\\renewcommand{\\flag}[1]{}   % red notes for Bucher and Yohai are not published\n"
+                "\\renewcommand{\\answerspace}[1]{\\vspace{#1}}   % room to write the answer\n")
+
+
+def pdflatex(tex_path, out_pdf, engine="pdflatex"):
     """Compile twice in its own folder; copy the PDF to out_pdf. Returns True on success."""
     for _ in range(2):
-        r = subprocess.run(["pdflatex", "-interaction=nonstopmode", "-halt-on-error", tex_path.name],
+        r = subprocess.run([engine, "-interaction=nonstopmode", "-halt-on-error", tex_path.name],
                            cwd=tex_path.parent, capture_output=True, text=True, errors="replace")
     pdf = tex_path.with_suffix(".pdf")
     if r.returncode != 0 or not pdf.exists():
@@ -141,6 +187,26 @@ def export_plan_and_sections(word):
         f = d / f"ass{n}_instructions.tex"
         f.write_text(student_doc(preamble, sec, "subsection"), encoding="utf-8")
         pdflatex(f, OUT / f"ass{n}" / f"ass{n}_instructions.pdf")
+
+    # 5. one student version per quiz (no solutions), in English and in Hebrew, both from the plan:
+    #    the Hebrew text is the quiz's "%HE " comment lines, compiled with lualatex
+    for q in sorted({int(n) for n in re.findall(r"^\\subsection\{Quiz (\d+)\}", body, re.M)}):
+        sec = section_text(body, rf"^\\subsection\{{Quiz {q}\}}", [r"^\\subsection\{", r"^\\section\{"])
+        sec, he = hebrew_lines(sec)
+        d = BUILD / f"quiz{q}"
+        d.mkdir(parents=True)
+        f = d / f"quiz{q}_en.tex"
+        doc = student_doc(preamble + STUDENT_QUIZ, strip_solutions(sec), "subsection")
+        f.write_text(doc, encoding="utf-8")
+        pdflatex(f, OUT / "quizzes" / f"quiz{q}_en.pdf")
+
+        if he is None:
+            log(f"export/quizzes/quiz{q}_he.pdf  (Quiz {q} in the plan has no %HE lines)", "FAIL")
+            continue
+        f = d / f"quiz{q}_he.tex"
+        f.write_text(HEBREW_PREAMBLE + STUDENT_QUIZ + "\\begin{document}\n" + strip_solutions(he)
+                     + "\n\\end{document}\n", encoding="utf-8")
+        pdflatex(f, OUT / "quizzes" / f"quiz{q}_he.pdf", engine="lualatex")
     return nums
 
 

@@ -71,22 +71,21 @@ void partA1(void)
 /* one line of A.2: hex and bin are the stored bits; raw is the variable
    given to %X as it is, so a negative value shows its sign extension to
    32 bits (0xF0 as int8_t gives raw=0xFFFFFFF0)                         */
-static void a2PrintLine(const char *hexLiteral, const char *type, int32_t value,
-                        uint16_t bits, uint8_t nBits)
+static void a2PrintLine(const char *type, int32_t value, uint16_t bits, uint8_t nBits)
 {
-    printf("A2: %s %s dec=%ld hex=0x%0*X bin=", hexLiteral, type, value, nBits / 4, bits);
+    printf("A2: hex=0x%0*X %s dec=%ld bin=", nBits / 4, bits, type, value);
     printBinary(bits, nBits);
     printf(" raw=0x%lX\r\n", (uint32_t)value);
 }
 
 void partA2(void)
 {
-    a2PrintLine("0x7F",   "uint8_t",  a2U8_7F, a2U8_7F,          8);
-    a2PrintLine("0x7F",   "int8_t",   a2I8_7F, (uint8_t)a2I8_7F, 8);
-    a2PrintLine("0xF0",   "uint8_t",  a2U8_F0, a2U8_F0,          8);
-    a2PrintLine("0xF0",   "int8_t",   a2I8_F0, (uint8_t)a2I8_F0, 8);
-    a2PrintLine("0xFFF6", "uint16_t", a2U16,   a2U16,            16);
-    a2PrintLine("0xFFF6", "int16_t",  a2I16,   (uint16_t)a2I16,  16);
+    a2PrintLine("uint8_t",  a2U8_7F, a2U8_7F,          8);
+    a2PrintLine("int8_t",   a2I8_7F, (uint8_t)a2I8_7F, 8);
+    a2PrintLine("uint8_t",  a2U8_F0, a2U8_F0,          8);
+    a2PrintLine("int8_t",   a2I8_F0, (uint8_t)a2I8_F0, 8);
+    a2PrintLine("uint16_t", a2U16,   a2U16,            16);
+    a2PrintLine("int16_t",  a2I16,   (uint16_t)a2I16,  16);
     taskDone(TASK_A2);
 }
 

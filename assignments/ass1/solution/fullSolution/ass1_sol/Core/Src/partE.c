@@ -6,14 +6,16 @@
  *          condition = armed AND obstacle
  *
  *          OFF     -> RISING    when condition
- *          RISING  -> DONE      when full brightness was reached (LEDs off)
- *          RISING  -> FALLING   when !condition
- *          FALLING -> OFF       when the level reaches 0
- *          FALLING -> RISING    when condition (from the current level)
+ *          RISING  -> DONE      at the end of the brightening (LEDs off),
+ *                               whatever the condition does meanwhile
  *          DONE    -> OFF       when !condition
  *
+ *          So a new brightening needs the condition to become false and
+ *          then true again after the previous one ended.
+ *
  *          The loop never blocks: the button and the sensor are read on
- *          every pass, and the brightness steps are paced by HAL_GetTick.
+ *          every pass (button 0 arms and disarms also during a brightening),
+ *          and the brightness steps are paced by HAL_GetTick.
  ******************************************************************************
  */
 #include "main.h"
@@ -22,7 +24,7 @@
 #include "io_board.h"
 #include <stdio.h>
 
-typedef enum { E_OFF, E_RISING, E_DONE, E_FALLING } EState;
+typedef enum { E_OFF, E_RISING, E_DONE } EState;
 
 volatile uint8_t  eArmed;                /* toggled by button 0         */
 volatile uint8_t  eObstacle;             /* IR sensor sees an obstacle  */
@@ -46,15 +48,10 @@ static void eShowLevel(void)
 }
 
 /* the E: line, printed when armed or the obstacle changes, and when a
-   brightening reaches full or a dimming reaches off; v = setRGB value */
+   brightening reaches full brightness; v = setRGB value               */
 static void ePrintLine(void)
 {
     printf("E: armed=%u obstacle=%u v=%u\r\n", eArmed, eObstacle, eValue());
-}
-
-static void eSetState(EState s)
-{
-    eState = s;
 }
 
 void partE(void)
@@ -66,7 +63,7 @@ void partE(void)
     eLevel = 0;
     eState = E_OFF;
     eShowLevel();
-    eObstacle = (HAL_GPIO_ReadPin(IR_SENSOR_GPIO_Port, IR_SENSOR_Pin) == GPIO_PIN_RESET);
+    eObstacle = (HAL_GPIO_ReadPin(IR_SENSOR_GPIO_Port, IR_SENSOR_Pin) == IR_OBSTACLE_LEVEL);
     printf("Button 0 arms and disarms.\r\n");
     ePrintLine();
 
@@ -81,7 +78,7 @@ void partE(void)
             HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, eArmed ? GPIO_PIN_SET : GPIO_PIN_RESET);
             ePrintLine();
         }
-        uint8_t obstacle = (HAL_GPIO_ReadPin(IR_SENSOR_GPIO_Port, IR_SENSOR_Pin) == GPIO_PIN_RESET);
+        uint8_t obstacle = (HAL_GPIO_ReadPin(IR_SENSOR_GPIO_Port, IR_SENSOR_Pin) == IR_OBSTACLE_LEVEL);
         if (obstacle != eObstacle)
         {
             eObstacle = obstacle;
@@ -89,47 +86,35 @@ void partE(void)
         }
         eCondition = eArmed && eObstacle;
 
-        /* transitions that depend only on the condition */
-        switch (eState)
+        /* transitions that depend only on the condition (none in RISING) */
+        if ((eState == E_OFF) && eCondition)
         {
-            case E_OFF:     if (eCondition)  { eSetState(E_RISING); lastStep = now; } break;
-            case E_RISING:  if (!eCondition) { eSetState(E_FALLING); }                break;
-            case E_FALLING: if (eCondition)  { eSetState(E_RISING); }                 break;
-            case E_DONE:    if (!eCondition) { eSetState(E_OFF); }                    break;
+            eState = E_RISING;
+            lastStep = now;
+        }
+        else if ((eState == E_DONE) && !eCondition)
+        {
+            eState = E_OFF;                     /* ready for the next one */
         }
 
-        /* one brightness step every eStepMs */
-        if (now - lastStep >= eStepMs)
+        /* one brightness step every eStepMs, while rising */
+        if ((eState == E_RISING) && (now - lastStep >= eStepMs))
         {
             lastStep = now;
-
-            if (eState == E_RISING)
+            if (eLevel == 255)                  /* full was shown: off    */
             {
-                if (eLevel == 255)              /* full was shown: off  */
-                {
-                    eLevel = 0;
-                    eSetState(E_DONE);
-                }
-                else
-                {
-                    eLevel = (eLevel > 255 - eStepSize) ? 255 : eLevel + eStepSize;
-                    if (eLevel == 255)
-                    {
-                        ePrintLine();           /* full brightness      */
-                    }
-                }
-                eShowLevel();
+                eLevel = 0;
+                eState = E_DONE;
             }
-            else if (eState == E_FALLING)
+            else
             {
-                eLevel = (eLevel < eStepSize) ? 0 : eLevel - eStepSize;
-                if (eLevel == 0)
+                eLevel = (eLevel > 255 - eStepSize) ? 255 : eLevel + eStepSize;
+                if (eLevel == 255)
                 {
-                    eSetState(E_OFF);
-                    ePrintLine();               /* dimmed to off        */
+                    ePrintLine();               /* full brightness        */
                 }
-                eShowLevel();
             }
+            eShowLevel();
         }
     }
 }

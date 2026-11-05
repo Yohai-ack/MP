@@ -10,14 +10,14 @@
 #include "io_board.h"
 #include <stdio.h>
 
-/* print "0b" and the lowest nBits of value, MSB first
-   (printf has no %b, so the bits are tested one by one)                */
+/* the function provided in the instructions (A.1), copied as it is:
+   print "0b" and the nBits lowest bits of value, the highest bit first */
 void printBinary(uint32_t value, uint8_t nBits)
 {
     printf("0b");
     for (int8_t i = (int8_t)(nBits - 1); i >= 0; i--)
     {
-        putchar(bitTest(value, (uint8_t)i) ? '1' : '0');
+        putchar(((value >> i) & 1u) ? '1' : '0');
     }
 }
 

@@ -170,11 +170,45 @@ goes to PuTTY in a MANDATORY tagged line format (`A1: u8=250 0xFA 0b11111010 ...
 `0b` + all bits). A.1 fixed: start 250 / 120 / 65530, +1 every 500 ms, 12 steps. D.2 variable fixed:
 `volatile uint32_t blinkMs = 500`. B.4 moved to C.1 (buttons held); the counting versions are now C.2 level, C.3
 edge, C.4 debounced, C.5 delay (35 debounced, 36 edge), each with an "Expect ..." hint (much more than 20 / 20 or a
-little more / exactly 20 / much less than 20). Videos only `V_C` and `V_E` (where input is needed); A, B, D are
-checked by an automatic test still to be written: build, flash with STM32_Programmer_CLI (installed on the C: PC),
-write `task`/`blinkMs` over SWD while running, read the COM port (pyserial, not yet installed), parse the lines. Not
-verified yet: writing RAM over SWD while the program runs (hot-plug). Running it flashes boards, so each run needs
-Yohai's OK. The test cannot see the IO-board LEDs (B.2, B.3, D.3 checked in the code).
+little more / exactly 20 / much less than 20). Videos only `V_C` and `V_E` (where input is needed).
+**A1 shortened (Yohai, 2026-11-03), tested on the cart 2026-11-04** (all of it; see the cart session below): A.1 gives `printBinary`
+as a listing (students call it from their own line function); Part C has no LEDs, button 1 ends a round (prints the
+result line once, then ignored 0.5 s against bounce; C.2's line adds passes/s over the round), nothing printed while
+counting, no round of light presses in C.3; the video shows one representative round of 20 per version (3 rounds stay
+in the report). Part E has no dimming: a brightening always runs its 2 s, the next one only after the condition went
+false and true again after its end; inputs still read on every pass. Done in the plan (red flag at the top of A1), in
+both reference projects (`ass1_sol`, `ass1_wrong`: partC.c, partE.c, printBinary; 0 warnings) and both reports (red
+"not yet tested" note in their status). The TA bounce numbers came from bounceCheck400, which writes no LEDs, so the
+C hints fit the new version better.
+
+**Automatic checking of submissions (2026-10-29): the project skill `/skl_prj_checkAss`** (`.claude/skills/
+skl_prj_checkAss/SKILL.md`) runs `assignments/autotest/assignments_autotest.py` (TA only). It asks which assignment;
+only those with a reference solution (`REFERENCE` in the script: A1, and A2 since 2026-11-04) are checked, A3 gets "no
+reference solution yet, nothing was tested". Per group: builds the project (Debug makefile, or CubeIDE headless: 18 s),
+flashes it with STM32_Programmer_CLI, runs the testable items (A1: A.1 to A.3, B.1 to B.3, D.1 to D.3) by writing
+`task`/`blinkMs` over SWD in HOTPLUG mode (the program keeps running), reads COM3 with pyserial (installed `--user`,
+so run Python without `-I`). Then Claude reads the group's report PDF against the reference report and adds
+`report: ...` remarks (`note` subcommand). Output: `assignments/autotest/assignments gradings.xlsx`, one sheet per
+assignment; per item a comment column ("works good" or a VERY short issue) and a points column for Yohai, then
+Others, then Total = 100 + all points. A1: C and E from the videos. About 3 min per group (D.1 alone 101 s). Logs in
+`autotest/logs/assN/`, unpacked submissions in `autotest/work/assN/` (+ summary.json); workbook, logs and work are
+git-ignored (student names). **Routine (Yohai, 2026-10-29):** Claude runs the check, then Yohai edits the sheet himself
+(points and wording). So Claude never touches points, and never changes a comment already in the sheet without his
+OK: the script writes only empty cells (or cells its own run wrote); any other change waits in
+`work/assN/pending.json`, is shown to Yohai as now/new, and is written only with `apply` (refused: `drop`). Claude
+also reviews the code (`note --kind code`): the board cannot see rules like "B.2/B.3 with bit operations only".
+Sheet rows: "ref good solution" (`ass1/solution/fullSolution/ass1_sol` + `ass1_sol.pdf`) and "ref wrong solution"
+(`ass1/solution/wrongSol/ass1_wrong` + `ass1_wrong.pdf`: A.1 starts all at 120, no binary in Part A, B.2/B.3 by an if
+chain; see its README.txt). Result 2026-10-29: the board caught A.1 and A.2, the code review caught B.2/B.3 (the board
+output is identical), the report review all three. Learned: `-w8` takes hex data only (a decimal "11" writes 0); PuTTY and a CubeIDE debug
+session both block the test, close them first. Run on ass1_sol (row "yohai ackerman"): all 9 items "works good",
+every number matched the TA report. Tested: nested-ZIP discovery, group name from `ass1_name1_name2_name3.zip`, the
+`note` command; NOT yet tested on a faulty program, nor on a real student report. The test cannot see the IO-board
+LEDs (B.2, B.3, D.3 checked in the code). Each run flashes a board: Yohai's OK.
+
+**Measured on the board (2026-10-29), now in ass1_sol.tex:** C.2 makes 9,679 loop passes/s (one button read
+103 us, not 110); A.1 lines 510 ms apart (500 + 1 tick + 7.4 ms UART); B.2 steps 1,003 ms; the PCA9538A raw byte at
+rest is `0b00001111` (bits 4 to 7 read 0); the instructions' C.1 example was changed to `raw=0b00001110` (Yohai).
 
 **Schedule as of 2026-10-17 (Yohai):** A1 out session 2, due session 5. A2 out session 7 (15.12),
 due session 10 (5.1.2027) (both moved one week later). **"Last material included" rule:** an
@@ -191,6 +225,37 @@ The working plan is `MP2026_plan.tex`
 a lab meeting for open questions. Checked against the Technion calendar. A3 is out 12.1.2027 and due
 **3.3.2027**.
 
+**The course has started (tutorial 1 given, 2026-11-03). Lectures come from Moodle, not from Bucher (Yohai,
+2026-11-03):** Bucher can't share his lectures in advance, so Yohai downloads them from the course website while they
+are available, into `<OneDrive>\courses\teaching\MP\2026\lectures from moodle\lecture N\` (on this PC
+`C:\Users\yohai\OneDrive - Technion\...`; the OneDrive part of the path may differ on the other PC). **The plan's
+"Lecture" column is filled from there:** for each lecture N, if its folder has presentations, read them and write the
+topics only, briefly; otherwise write "no lecture yet". Re-check the folder at every session start and update the
+column. The planned lecture topics (Bucher's syllabus, my drafts) were replaced on 2026-11-03; they are in git history
+(commit d85ddaf and earlier). State 2026-11-03 (evening): `lecture 1\` has 3 PDFs (intro + numbers/overflow/bitwise,
+first project LED/printf, stack/buses/decoding/flip-flops/counters) and the example project zip; row 1 is filled.
+**Rows 2 and 3 are one merged cell (`\multirow`, Yohai's request):** "Must be taught for A1 and Quiz 1: ..." with the
+A1 topics lecture 1 did not cover (bit idioms on registers, active-low, level vs edge, bounce/debounce, missed events,
+HAL_Delay vs HAL_GetTick, volatile, truth tables/state diagrams). When lectures 2 and 3 arrive, compare them with that
+list and tell Yohai what is still missing before Quiz 1. The folder is Yohai's own (not Bucher's), but treat it as
+read-only: only read it.
+
+**Quiz 1 (written 2026-11-03):** `\subsection{Quiz 1}` right after A1 in the plan: 7 multiple-choice questions (4
+options, the correct one marked green, full solutions) and one open coding question (`blinkAndCount`: non-blocking
+LD2 toggle with HAL_GetTick + XOR, edge-based count of button 0) with a solution and grading points. It has the
+answers, so it is internal: the A1 export stops at the next `\subsection`, so `ass1_instructions.pdf` does not include
+it, but the full `export/MP2026_plan.pdf`/`.docx` does. Answers are kept in `\begin{solution}...\end{solution}`
+and `\correct`; the open question has `\answerspace{14cm}`. **The export makes the student versions** (Yohai,
+2026-11-03): `export/quizzes/quizN_en.pdf` and `quizN_he.pdf`, both from the plan. **The plan is the only source
+(Yohai: a separate quiz .tex is redundant and dangerous; the export never produces source files):** the Hebrew quiz
+is a block of `%HE ` comment lines at the end of the Quiz subsection (pdflatex and the Word copy ignore them); the
+export strips the prefix and compiles it with lualatex, with `HEBREW_PREAMBLE` from export_plan.py (babel bidi, font
+David; `\en{}`/`\code{}` for English runs, `codeblock` around listings, longer formulas in `\mbox`). Hebrew wording,
+professional terms and all code in English. The Hebrew block is a hand-kept mirror of the English quiz: change both
+together. The open question gives the code of part (2) (button counting); students write the variables, the loop and
+part (1), the non-blocking LD2 toggle. The quiz starts with instructions (no calculator) and a table of 2^0..2^7.
+Section 3 of the plan is now "Assignments and quizzes".
+
 **Assignment emphasis (Yohai, 2026-10-02):** start from the 2025 cart assignments, but shift the
 focus to **coding, hardware and timing issues**. Kinematics and trajectory work is "less
 interesting", so give it less weight. **A2 drafted 2026-10-17** from Yohai's outline: A PWM in three ways
@@ -204,6 +269,101 @@ the strategy explained, a state machine, encoder distances); C bonus: pivot and 
 straight lines. Tutorial changes the same day: 8 = encoder configurations, 9 = control workflow (was
 8), 10 = kinematics (straight lines) and state machine; the UART parser and MATLAB GUI tutorial
 was dropped.
+**A2 rewritten in the A1 spirit (Yohai, 2026-10-29):** no "Window" line; one program chosen by
+`volatile uint16_t task` (three digits: part, item, sub-item; an item without sub-items ends in 0, report-only items
+such as A.1.3 and A.4 have no task): 111/112, 121 to 124, 131/132, 210, 221 to 223, 231 to 233, 310 to 350, 411/412,
+420, 511 to 513. Mandatory tagged lines (`A1.1:`, `B2.2:` ...); Part A globals `pwmN`/`pwmM`. Videos `V_A` (Part A,
+with sound) and `V_B` (B.2.1 and B.3.1); the rest is meant for the automatic test (never written in the instructions).
+Interrupts on only in the tasks that use them: PA7's EXTI disabled once in USER CODE 2 and enabled only in B.3 (that
+is why B.2 needed `HAL_NVIC_DisableIRQ`: CubeMX enables EXTI9_5, and in one program the B.3 callback would also run in
+B.2); `sonarStop()` added to the provided sonar.c (starting now resets the counts). D.1 switches the encoder mode at
+run time (`TIM1->SMCR` SMS bits), so one `.ioc` (TI1) serves both settings, and A3 can keep it. D.2 starts TIM1 at
+65,000 so it wraps soon. E.1 = steps 30/50/70 % recorded into MATLAB data files (how: shown in class); E.2 = fits,
+overlaid plot; no E.3. A.2.3 at 17 kHz: the TIM7 callback itself must stop when `task` changes (the main loop may
+starve). Red note in Part C: Yohai thinks Part C should be deleted (students would ignore the io_board.c they use).
+**A2 solution run on the cart (2026-10-29, Yohai's OK; every task over SWD, no hand):** all tasks work. Measured:
+A.1 904k passes/s; TIM7 at 10 kHz costs about 13 % of the CPU (1.85M vs 2.12M passes/s), so **t_ISR is about 13 µs in
+the Debug build, not the 1 µs of tutorial 4's examples** (item 8 below; no scope, Yohai); at 1.7 MHz the main loop
+is fully starved (nothing printed for 3 s); A.2.4 75 ms per 1000 LED writes; dead zone 15 % (wheel starts), 3,750
+counts/s at 100 %; **wheel 1 forward counts DOWN**; B.2.2 readings=0 missed=64, B.3.2 103/0, loop period 156 ms both;
+**C.1 finds 7 addresses** (0x03 = PCA9634 software reset, 0x70 = All Call of the uninitialised PCA9685); C.3 605 / 233 ms;
+E steps 10.5 / 18.5 / 26.8 counts per 10 ms at 30/50/70 %, tau about 0.1 s, line through them gives u0 about 4 %
+(below the 15 % start: stiction). **D.2 as first written (start 65,000, 5 s each way) never wraps on this cart** (forward
+counts down, away from 65,535). **Changed 2026-11-04 (Yohai):** start at 0 and turn in one direction until two wraps,
+plus 1 s, whatever the cart; solution changed the same way (5 min safety stop). **Every "on the cart" check is a red
+flag in the plan** ("Yohai, on the cart: ...", Yohai 2026-11-04), so it is not forgotten near the cart; after the
+session below only V_A/V_B trial videos remained (all closed on 2026-11-05: see below).
+
+**Cart session 2026-11-04 (Yohai at the cart, Claude over SWD; COM6 on this PC; the Nucleo is powered by the cart
+battery through E5V, so with the battery off the ST-LINK sees 0.2 V).** A1: automatic test all "works good"; C.1 to
+C.5 and E with presses (C.2 22,625 at 9,615 passes/s, C.3 23, C.4 20, C.5 0 debounced / 13 edge, E all cases right,
+brightening 2.07 s). **The IR sensor of this cart is HIGH for an obstacle** (hardware test assumed LOW): Yohai decided
+the students find the level themselves (A1 Part E opens with it, `#define IR_OBSTACLE_LEVEL`, A2 B uses it; red flag:
+check the other carts); all three solution projects use the define (SET). **Buttons seen from the front: 3, 2, 1, 0
+left to right** (from the other side it is reversed, which confused us). In C.5 a quick press of button 1 is missed
+(150 ms loop): it must be held. A2: **wheel/encoder mapping and directions are per cart and the students' job** (Yohai):
+the configuration section now says "Check your cart" (shared lab carts). **No motor enable pin** (PC3 is not even
+configured). D.1 rewritten (Yohai): D.1.1 by hand, one revolution at a time three times (long hand runs miscount);
+D.1.2 with the motor, 50 %, 2 s per mode alternating TI1/TI12/TI1/TI12 (`D1.2: mode=TI1 counts=<n>`). Measured:
+**660 counts/rev in TI1** (661, 663), factor 2.00 to 2.01, so 1,320 in TI12 (0.55 and 0.27 deg; 660 = 11 lines x 30:1
+x 2, inferred). B.1 rewritten short ("an engineering approach is expected"); measured 5/10/15 cm: 101.9 counts/mm,
+offset -6 mm (334 m/s), reliable from about 30 mm. Test 1 needs passes about 3 s apart (1 s restart rule; added to the
+instructions): B.2.1 6 stops, B.3.1 9. B.2.2 0/64, B.3.2 102/0, periods 155/156 ms. C.4 all buttons right, **PCA9538A
+fitted**. **Servo on PCA9685 channel 0** (now in C.5). D.2 new version: wraps at 10 ms and 28.6 s, 3.5 rev/s at 50 %.
+E.1: -14.1/-21.6/-29.5 rad/s, tau about 0.1 s; K no longer grows with u (battery-dependent). Constants now in the
+solution: COUNTS_PER_REV 660, RAW_PER_MM_X10 1019, SERVO_CHANNEL 0 (confirmed), IR_OBSTACLE_LEVEL SET. Both TA reports
+updated. Log: `assignments/autotest/logs/ass2/cart_session_2026-11-04.log` (A1 and A2; git-ignored). The test tools
+(COM logger, SWD helper) were scratch scripts, not kept. Also on 2026-11-04: the wrong A1 solution passed the
+automatic test as designed (A.1 and A.2 caught); the E.1 MATLAB recording script was run for real (R2025b; it needed
+`s.Timeout` + an empty-line check, else `readline` loops forever) and E.2 fitted with `fminsearch`: K -0.445/-0.420/
+-0.416 rad/s per %, tau 0.123/0.094/0.089 s, rms about half a count step; figure `ass2/solution/fullSolution/
+e2_fit.png` in the TA report. (The eyes-and-ears checks and the V_A/V_B trial videos left open here were closed on 2026-11-05.) **A2 automatic test added (2026-11-04)** to `assignments_autotest.py`
+(`Tester2`, `test_ass2`, `task` written with `-w16`, `REFERENCE[2]`): A.1 to A.3, B.1, B tests 2 and 3, C.1 to C.5,
+D.1.2, D.2, E.1 (A.4/E.2 report, B test 1 and D.1.1 hand). ass2_sol: all "works good" (row "ref good solution",
+sheet "Assignment 2", about 4 min). `assignments/ass2/solution/wrongSol/ass2_wrong` (4 planted errors, README.txt):
+all caught. skl_prj_checkAss updated for A2.
+**2026-11-05 (Yohai): privacy and one assignment per check.** Course policies: the ZIP is `ass#_group#.zip` and the
+title page has only the group number; no names, IDs or emails anywhere (Yohai keeps the key; Claude never sees it). The
+script reads `groupK` from the ZIP name; every sheet starts with "ref good solution", "ref wrong solution", group1 to
+group10 (`FIXED_ROWS`, added if missing, with the Total formula); it backs the workbook up to
+`work/assN/gradings_backup_<date>.xlsx` before each test. skl_prj_checkAss checks ONE assignment per run (argument
+`/skl_prj_checkAss 1` or `2`), and first tells Yohai whether the workbook exists, what it holds and how nothing is lost,
+then waits for his OK. A1/A2: "decimal unless specifically required otherwise"; A1 A.2 line is now
+`A2: hex=0x7F uint8_t dec=127 bin=0b01111111 raw=0x7F` (the literal was always equal to hex=; raw stays, it shows the
+sign extension), in the plan, both A1 solutions, both reports and the test. The IR "check the other carts" flag removed.
+Log: `assignments/autotest/logs/ass2/`.
+**A2 shortened and checked on the cart (2026-11-05/06, Yohai).** The instructions from A1 to A3 should be less detailed
+(the loss of automatic testing is accepted); A2 was edited part by part with Yohai's approval. Task numbers now: 111/112,
+121 to 124, 131/132, 210, 221/222 (B.2 IR, polling/interrupts), 231/232 (B.3 ultrasonic), 310 to 350, 411/412 (D.1.1/
+D.1.2 by hand, TI1 / TI1 and TI2), 413 (D.1.3: 8 s at 50 % per mode, `D1.3: mode= counts=`), 420, 510 (E.1, the four
+wheels, own design), 521 to 524 (E.2 step of each wheel, `E2.k: t= w=`); E.3 = the fit in physical units (u = duty x
+12 V, rad/s), a new "E.3" column pair in the workbook. B: wheel 1 at 40 %, status line only on change, HAL_Delay(150)
+every pass, **B1 ends every B task** (the test presses it over SWD: PC13 ODR bit set, MODER to output 0.5 s); **one
+sensor per test** (Yohai, 2026-11-05): B.2 stops only for the IR sensor, B.3 only for the sonar. B.2 asks for **very
+quick** flicks. Tutorial flags added: 4 (counting passes, PSC/ARR at run time), 5 (sonar with polling and interrupts,
+IR EXTI demo), 8 (encoder mode at run time): content still to add to the slides. Measured (B.2 on the first cart, the
+rest on a second cart): B.2 polling 9 of 10 quick flicks, interrupts 10 of 10; B.3.1 readings=0 missed=139 (polling
+can never complete a reading: two edges about 1 ms apart, one look every 152 ms; the hand speed does not matter),
+B.3.2 244 readings, 10 of 10 stops; D.1.2 1,320.2 counts/rev; D.1.3 -18,654 / -37,815 (factor 2.03, the speed drifted
+1.4 %; the int32 sum is needed); D.2 wraps at 10 ms and 14.08 s, 22.4 rad/s; E.1 each motor moves only its own
+encoder; **on the second cart motor 4 runs forward with DIR RESET** (the configuration section says SET; it already
+says "check your cart"), signs -1, +1, -1, +1 in the solution; E.2 K 3.58/3.43/3.22/3.12 rad/s per V, tau 0.09 to 0.13 s
+(figure `e3_wheels.png` in the TA report). Eyes and ears (Yohai): LD2 steady from N = 20 (50 Hz), the border at 30;
+the wheel smooth and acceptable at 100 Hz and 1 kHz (the gearbox makes most of the noise), still turning normally at
+1.7 MHz (the failure shows in the passes: 1 in 23 s), a little quieter at 17 kHz; C.2 colours exactly as sent (larger
+= brighter). So the A hint now says a motor PWM in the audible range "may be heard", and the TA report accepts an
+honest description. Automatic test of the new version: ref good all "works good", ref wrong all 4 planted errors
+caught (A.3.1, B.3.2 readings=0, C.5, D.1.3 factor 1.00). **Yohai: no more cart re-tests just because carts differ**:
+we check the code and the coherence of the instructions, not a specific cart. All "Yohai, on the cart" flags are gone;
+Yohai will not film trial videos.
+**A2 reference solution (2026-10-29):** `assignments/ass2/solution/fullSolution/ass2_sol/`
+(CubeIDE project; `ass2_sol.ioc` = the TA's ass2.ioc, built from ass1.ioc + the configuration section and checked in
+the generated code; builds with 0 warnings) and `ass2_sol.tex` (TA report; the PDF is git-ignored). The constants were measured
+on the cart on 2026-11-04 (above); since 2026-11-06 no "[to measure]" is left in it.
+C.1 finds 7 addresses (0x03 and 0x70 too), as written in the report. Learned: **CubeMX on this PC is now 6.18.1**, and a
+6.18.0 `.ioc` makes the headless CubeMX hang at `config load` (a hidden migration dialog); write `MxCube.Version=6.18.1`
+and `MxDb.Version=DB.6.0.181` into the file first. Students opening ass1.ioc (6.18.0) in a newer CubeMX get a
+"migrate?" question in the GUI.
 
 ### 4.3 Meeting plan (syllabus)
 
@@ -482,36 +642,31 @@ stmProjects/hardwaret_test/    CubeIDE project (G474RE; align_servo.ioc; Hardwar
 
 1. **Cart hardware, to check on the cart/PCB** (from the hardware-test project; kept out of the
    student-facing configuration sections until confirmed):
-   - Which physical wheel is motor 1 to 4 (FL/FR/RL/RR), and each encoder's count direction.
-   - Motor-driver enable (M_EN): `main.h` assumes PC3, but the code never drives it and the wheels
-     turn anyway. Is there an enable pin at all?
-   - **Servo channel on the PCA9685:** the test drives CH0 to CH3 together with the same pulse, so
-     it works whichever channel the servo is on. Most likely only one channel is wired (the
-     ultrasonic gimbal) and the other three are free headers, but the code can't tell which. The
-     A2 configuration section deliberately doesn't name a channel. Check the board before A2 is published.
+   - (Settled 2026-11-04, Yohai: the wheel mapping and directions are per cart, and the students check them;
+     A2 "Check your cart". No motor enable pin: PC3 is not configured and the wheels turn. Servo on channel 0.)
    - Configured in the test `.ioc` but unused, and purpose unknown: ADC1_IN12 (PB1), ADC5_IN1 (PA8),
      TIM15 (50 Hz base, interrupt enabled), TIM20_CH3 PWM (PC8). Possibly leftovers (battery
      sense? old direct servo timer?). Left out of the student docs.
    - Free GPIO outputs in the test `.ioc`: PC3, PC4, PB5, PB6, PB7, PB14.
-   - Encoder mode: TI1 (×2 counting) in the test; TI12 would give ×4. Also the counts per wheel
-     revolution (to measure).
-   - Is the PCA9538A button chip fitted on this year's IO board? The test code never reads it.
+   - (Measured 2026-11-04: 660 counts per wheel revolution in TI1, 1,320 in TI12. The PCA9538A is fitted.)
    - `main.h` has a stale comment with TRIG/ECHO swapped (ECHO = PB2, TRIG = PC12). The `.ioc` and
      `main.c` (TRIG = PB2 TIM5_CH1 PWM, ECHO = PC12 TIM5_CH2 IC) are correct.
    - A2's 100 Hz sample interrupt: TIM6 (PSC 169, ARR 9999) chosen in the A2 configuration section,
      plus TIM7 (PSC 169, ARR 99, 10 kHz) for the software PWM of A.2,
-     and PA7 becomes GPIO_EXTI7 (EXTI9_5). Not yet checked in CubeMX: build ass2.ioc and verify.
+     and PA7 becomes GPIO_EXTI7 (EXTI9_5). Checked: ass2_sol.ioc builds and runs with them.
 2. **Do A1 students get Bucher's `io_board.h`/`.c`** (Lesson 3 package, `lessons/Lesson_3/
    lesson3_cubeide_sources/`)? His syllabus and Lesson 3 slides say so ("provided LED helper
    library", "black-box principle"), and A1 as written depends on it for the RGB LEDs and buttons,
    but Yohai and Bucher haven't agreed it. Yohai's decision (2026-10-22): give a trimmed copy
    (see §4.6); tell Bucher.
 3. (Resolved 2026-10-17: A2 is now due 5.1.2027, one week before A3 goes out on 12.1.2027.)
-4. Where does the servo-scanned sonar go: A2, A3 or a bonus? (A2 now uses the sonar alone in Part B
-   and the servo alone in C.5; the scanned map is still unplaced.)
+4. (Decided 2026-11-04, Yohai: the servo-scanned sonar becomes a task in A3; red flag at the top of A3 in the
+   plan. A2 keeps the sonar alone in Part B and the servo alone in C.5.) Part C stays as it is until Yohai
+   discusses it with Bucher.
 5. 🔴 **`io_board.c` writes PCA9634 MODE1 = 0x20, commented "auto-increment".** On the PCA9634 the
    MODE1 auto-increment bits are, I believe, read-only and set through the control byte. Check the
-   datasheet before A2 C.3 (one transaction vs. many) is published; if confirmed, tell Bucher.
+   datasheet before A2 C.3 (one transaction vs. many) is published; if confirmed, tell Bucher. (Red flag in A2 C.3
+   since 2026-11-04.)
 6. Agree with Bucher: Quiz 2 moved to lecture 9 and now covers sessions 4 to 8 (my assumption), and
    PI speed control is no longer in A2 (Yohai's outline, 2026-10-17); it is A3 Part A.
    Also: lectures 8 and 9 (PI control; UART and MATLAB GUI) no longer match tutorials 8 and 9
@@ -521,11 +676,12 @@ stmProjects/hardwaret_test/    CubeIDE project (G474RE; align_servo.ioc; Hardwar
    now I2C and the .ioc tutorial moved to tutorial 6 (with SR04 reading, then self-learning: blocking
    vs non-blocking). The "EXTI interrupt with a counter" left tutorial 6, so no tutorial covers EXTI
    before A2 Part B.
-7. 🔴 **The motor winding's electrical time constant L/R** (red flag in A2 A.2(b), for Bucher): we
-   assume about 1 ms, which would explain why a 100 Hz PWM is loud.
-8. 🔴 **Measure t_ISR on the board** (Debug build). Tutorial 4's interrupt-timing slide and the A2 Part A
-   answers assume about 1 µs (170 cycles). The polling-timing slide likewise assumes a bare polling loop
-   (HAL_GetTick, compare, HAL_GPIO_WritePin) takes about 1 µs per pass: measure that too.
+7. 🔴 **The motor winding's electrical time constant L/R** (red flag in A2 A.2.2, for Bucher): we
+   assume about 1 ms. On the cart (2026-11-05, in the air) a 100 Hz PWM was NOT loud: the wheel ran smoothly and
+   the gearbox made most of the noise; the flag now says so.
+8. (Settled 2026-10-29, Yohai: no scope measurement.) t_ISR from the A2 run: about 13 µs per TIM7 interrupt in
+   the Debug build (from the loop passes), not the 1 µs of tutorial 4's examples; a bare polling pass is 1.1 µs, as the
+   slide says. Tutorial 4 slide 28 gets a note that its 1 µs is only an example value, not our hardware.
 9. **Bucher's 2025 polling-PWM code** (main loop: `pwm = (TIM2->CNT % 100) < x`). With TIM2 at
    PSC 0 the counter moves about 170 counts per loop pass, so `% 100` is sampled almost at random:
    the LED's average brightness is right, but it isn't a clean PWM. Its comment "48.47 times per
@@ -538,7 +694,7 @@ stmProjects/hardwaret_test/    CubeIDE project (G474RE; align_servo.ioc; Hardwar
    counts), B.3 interrupts (EXTI for PA7, TIM5 capture via sonarCaptureEdge); stop threshold 150 mm.
    The configuration section no longer gives the tick size or the distance formula.) Still to
    check on the board: the 150 ms HAL_Delay in B.2 should make nearly every polled reading an
-   overcapture (missed); confirm that this is what students will see.
+   overcapture (missed); confirmed on the cart (readings=0, missed=64, on 2026-10-29 and 2026-11-04).
 
 ## 7. Plan rationale and notes (kept out of MP2026_plan.tex)
 

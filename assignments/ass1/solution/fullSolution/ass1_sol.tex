@@ -101,19 +101,34 @@ expression and choose another number format (hex or binary), where the view offe
 (\lv{eState}) is shown by name.
 
 \subsection{Status of this solution}
-The code builds with the CubeIDE toolchain (GCC 14.3, Debug configuration) with 0 warnings (2026-10-28). It has
-\textbf{not yet been run on the board}. The expected numbers below are calculated, or taken
-from the TA measurements with the \texttt{bounceCheck400} project (2026-10-22, I2C at 400\,kHz, button~0); check them
-on the board before grading against them.
+\textbf{Run on the cart, all of it (2026-11-04).} The shortened A1 (the binary function provided, Part C without LEDs and with button~1 ending a round, Part E without dimming): A, B and D by the automatic test (all ``works good''); C and E with presses and a hand, the numbers given in each part below.
+
+The code builds with the CubeIDE toolchain (GCC 14.3, Debug configuration) with 0 warnings (2026-10-28). Parts A,
+B and D were run on the board by the automatic test (2026-10-29), and every line and number below matched: D.1 total
+101\,201\,ms, D.2 half periods 502 to 503\,ms (\lv{blinkMs} = 500) and 102\,ms (100), D.3 17\,740 and 17\,742\,ms
+with \texttt{HAL\_Delay}, 10\,000 and 7\,693\,ms with \texttt{HAL\_GetTick}. With no input, C.1, C.2 and E were run
+too: their start lines are as below, and C.2 makes 9\,679 loop passes per second. Presses (C) and the IR sensor (E) were run
+on 2026-11-04; the ``expected'' numbers in Part~C come from the TA measurements with the \texttt{bounceCheck400}
+project (2026-10-22, I2C at 400\,kHz, button~0), and the measured ones are given next to them.
+
+\subsection{The automatic test}
+The skill \texttt{/skl\_prj\_checkAss} runs \texttt{assignments/autotest/assignments\_autotest.py}. It builds a
+group's project (with its \texttt{Debug} makefile, or CubeIDE headless if there is none), flashes it, runs A.1 to A.3,
+B.1 to B.3 and D.1 to D.3 by writing \lv{task} (and \lv{blinkMs}) over SWD while the program runs, reads the tagged
+lines from the COM port, and writes one short comment per task into the sheet ``Assignment 1'' of
+\texttt{assignments/autotest/assignments gradings.xlsx}: ``works good'', or what is wrong. Then Claude reads the
+group's report against this document and adds ``report: \ldots'' comments where needed. C and E are graded from the
+videos. The TA types the points (e.g.\ $-2$); the Total column is 100 plus all of them. One group takes about
+3\,minutes on the board, most of it D.1. Close PuTTY and stop any CubeIDE debug session first: both hold the board.
 
 \section{Shared helpers}
 \begin{lstlisting}
-void printBinary(uint32_t value, uint8_t nBits)   // printf has no %b
+void printBinary(uint32_t value, uint8_t nBits)   // provided in the instructions (A.1)
 {
     printf("0b");
     for (int8_t i = (int8_t)(nBits - 1); i >= 0; i--)
     {
-        putchar(bitTest(value, (uint8_t)i) ? '1' : '0');   // 0b11110000
+        putchar(((value >> i) & 1u) ? '1' : '0');      // 0b11110000
     }
 }
 
@@ -140,14 +155,17 @@ uint8_t readButtonsHeld(void)                     // bit n = 1 while button n is
     return (uint8_t)(~readButtonsRaw()) & 0x0Fu;
 }
 \end{lstlisting}
-One LED update by \texttt{showByteOnLeds} is 24 I2C writes, about 2\,ms at 400\,kHz; one button read is about
-110\,$\mu$s.
+\texttt{printBinary} is given to the students in A.1; they call it from their own line-printing
+functions. One LED update by \texttt{showByteOnLeds} (B.2, B.3) is 24 I2C writes, about 2\,ms at 400\,kHz; one button read is about
+103\,$\mu$s (measured through C.2: 9\,679 loop passes per second).
 
 \section{Part A: variable types, signed and unsigned, wrap-around}
 
 \subsection*{A.1}
 \run{Write \lv{task} = 11. The three variables start at 250, 120 and 65530 (the
-values the instructions prescribe) and grow by one every 500\,ms; after the start line and 12 steps the task is done.}
+values the instructions prescribe) and grow by one every 500\,ms; after the start line and 12 steps the task is done.
+Measured on the board, the lines come 510\,ms apart: \texttt{HAL\_Delay(500)} waits 501 ticks, and printing the
+85-character line takes 7.4\,ms more ($85 \times 86.8\,\mu$s).}
 
 \see{13 lines. Selected ones: the start, steps 5 to 8 (u8 and u16 wrap at step 6, i8 at step 8) and step 12:}
 \begin{lstlisting}[language={},basicstyle=\ttfamily\scriptsize]
@@ -177,12 +195,12 @@ The binary output shows it directly: the same 8 bits, read as unsigned or signed
 
 \see{}
 \begin{lstlisting}[language={},basicstyle=\ttfamily\scriptsize]
-A2: 0x7F uint8_t dec=127 hex=0x7F bin=0b01111111 raw=0x7F
-A2: 0x7F int8_t dec=127 hex=0x7F bin=0b01111111 raw=0x7F
-A2: 0xF0 uint8_t dec=240 hex=0xF0 bin=0b11110000 raw=0xF0
-A2: 0xF0 int8_t dec=-16 hex=0xF0 bin=0b11110000 raw=0xFFFFFFF0
-A2: 0xFFF6 uint16_t dec=65526 hex=0xFFF6 bin=0b1111111111110110 raw=0xFFF6
-A2: 0xFFF6 int16_t dec=-10 hex=0xFFF6 bin=0b1111111111110110 raw=0xFFFFFFF6
+A2: hex=0x7F uint8_t dec=127 bin=0b01111111 raw=0x7F
+A2: hex=0x7F int8_t dec=127 bin=0b01111111 raw=0x7F
+A2: hex=0xF0 uint8_t dec=240 bin=0b11110000 raw=0xF0
+A2: hex=0xF0 int8_t dec=-16 bin=0b11110000 raw=0xFFFFFFF0
+A2: hex=0xFFF6 uint16_t dec=65526 bin=0b1111111111110110 raw=0xFFF6
+A2: hex=0xFFF6 int16_t dec=-10 bin=0b1111111111110110 raw=0xFFFFFFF6
 === task 12 done ===
 \end{lstlisting}
 
@@ -246,7 +264,8 @@ bit~5 only, and writes it back, so the other pins of port~A keep their levels.
 b2Pattern = (uint8_t)((b2Pattern << 1) | (b2Pattern >> 7));   // rotate left by one
 \end{lstlisting}
 \run{Write \lv{task} = 22 (B.2, starts from \texttt{0x01}) or 23 (B.3, starts from \texttt{0x03}). One step per
-second, forever, until \lv{task} changes.}
+second, forever, until \lv{task} changes. Measured: 1\,003\,ms per step on average (the LED update, about 2\,ms, and
+the line, about 1.3\,ms, come on top of \texttt{HAL\_Delay(1000)}).}
 
 \see{B.2: \texttt{B2: 0b00000001}, \texttt{B2: 0b00000010}, \ldots, \texttt{B2: 0b10000000}, \texttt{B2: 0b00000001},
 \ldots\ B.3: \texttt{B3: 0b00000011}, \texttt{B3: 0b00000110}, \ldots, \texttt{B3: 0b11000000}, \texttt{B3: 0b10000001}
@@ -263,49 +282,66 @@ are lit by \texttt{showByteOnLeds}, which tests each bit.
 \subsection*{C.1 Buttons held}
 \run{Write \lv{task} = 31. Hold any combination of the four buttons.}
 
-\see{At the start: \texttt{C1: raw=0b11111111 held=0b00000000 count=0}. With button~0 held:
-\texttt{C1: raw=0b11111110 held=0b00000001 count=1}. With buttons 0 and 2: \texttt{held=0b00000101 count=2}. A line is
-printed only when the count changes. (The raw bits 4 to 7 depend on the chip; the solution prints them as read.)}
+\see{At the start (measured on the board): \texttt{C1: raw=0b00001111 held=0b00000000 count=0}. With button~0
+held: \texttt{C1: raw=0b00001110 held=0b00000001 count=1}. With buttons 0 and 2: \texttt{held=0b00000101 count=2}. A
+line is printed only when the count changes. On this board bits 4 to 7 of the raw byte read 0.
+Run with presses on 2026-11-04: every button and combinations of 2 and 3 buttons gave the right \texttt{held} and
+\texttt{count}. On our cart, seen from the front, the buttons are 3, 2, 1, 0 from left to right (button~0 is the
+rightmost); it may differ on other carts, and the students find it themselves.}
 
 \textbf{Answer.} The buttons are active-low, so \texttt{\textasciitilde raw} makes a held button a 1. Bits 4 to 7 of
-the PCA9538A carry no button; after the inversion they may be 0 or 1, so \texttt{\& 0x0F} clears them. The count is
+the PCA9538A carry no button; they read 0, so after the inversion they are 1, and \texttt{\& 0x0F} clears them.
+Without the mask the count would include them (4 extra), which is exactly why the instructions ask for it. The count is
 the sum of \texttt{bitTest(held, n)} for $n = 0$ to 3.
 
 \subsection*{C.2 to C.5: counting presses}
-\run{In every version, the count is shown on the 8 LEDs (its lowest 8 bits) and printed only when it
-changes, as \texttt{C2: count=<n>} (with the tag of the item). To start a new round of 20 presses, write \lv{cReset} = 1
-(it returns to 0 by itself, and the count to 0). Write \lv{task} = 32, 33, 34, 35 or 36 for C.2, C.3, C.4, C.5
-(debounced) and C.5 (edge). \lv{cDebounceMs} = 20 and \lv{cDelayMs} = 150 can be changed while it runs. The hint in the
-instructions for each version: C.2 much more than 20, C.3 20 or a little more, C.4 exactly 20, C.5 much less than 20.}
+\run{Write \lv{task} = 32, 33, 34, 35 or 36 for C.2, C.3, C.4, C.5 (debounced) and C.5 (edge). The count runs in
+rounds: press button~0 20 times, then button~1. Button~1 prints the result line, \texttt{C3: count=21} (C.2 also gives
+the passes per second, \texttt{C2: count=4317 passes=9680}), sets the count back to 0 and starts the next round, so the
+3 rounds need no restart. Nothing else is printed while counting, and the LEDs are not used. \lv{cDebounceMs} = 20 and
+\lv{cDelayMs} = 150 can be changed while it runs. The hint in the instructions for each version: C.2 much more than
+20, C.3 20 or a little more, C.4 exactly 20, C.5 much less than 20.}
+
+\begin{lstlisting}
+// button 1: once per press (released -> pressed); then ignored for 0.5 s, so its bounces print nothing
+static uint8_t roundEnded(RoundButton *b, uint8_t held, uint32_t tick)
+{
+    uint8_t now = bitTest(held, 1);
+    uint8_t pressed = now && !b->before;
+    b->before = now;
+    if (pressed && (tick - b->lastEnd >= ROUND_IGNORE_MS)) { b->lastEnd = tick; return 1; }
+    return 0;
+}
+\end{lstlisting}
+One loop pass reads all four buttons in one I2C read, so button~1 costs the loop nothing extra. Without the LED
+update after each count, a pass is only that read (about 103\,$\mu$s): the same conditions as the TA measurements with
+\texttt{bounceCheck400}, on which the expected numbers below rest.
 
 \subsection*{C.2 Level-based}
 \begin{lstlisting}
-uint8_t now = bitTest(readButtonsHeld(), 0);
-if (now) cCount++;                       // every pass while held
-if (before && !now) showCount();         // shown once, when the button is released
-before = now;
+held = readButtonsHeld();
+if (bitTest(held, 0)) cCount++;          // every pass while button 0 is held
+loops++;                                 // passes per second = loops / round time
 \end{lstlisting}
-The loop passes per second are printed once a second as \texttt{C2: passes=<n>}.
-
-\textbf{Expected.} About 9\,000 loop passes per second: one pass is one I2C read of the button chip, about
-110\,$\mu$s. A press of about 150\,ms adds about $0.15 \times 9000 \approx 1\,350$, so 20 presses give a count of
-tens of thousands, different every round (the LEDs show only its lowest 8 bits). \textbf{Answer:} the level-based
-counter counts loop passes while the button is held, not presses; the count is
-(passes per second) $\times$ (total time held).
+\textbf{Measured} (2026-11-04, one round of 20 natural presses): \texttt{C2: count=22625 passes=9615}.
+\textbf{Expected.} About 9\,700 loop passes per second (measured 9\,679, with no press): one pass is one I2C read of
+the button chip, about 103\,$\mu$s. A press of about 150\,ms adds about $0.15 \times 9\,700 \approx 1\,450$, so 20
+presses give a count of tens of thousands, different every round. \textbf{Answer:} the level-based counter counts loop
+passes while the button is held, not presses; the count is (passes per second) $\times$ (total time held).
 
 \subsection*{C.3 Edge-based}
 \begin{lstlisting}
 uint8_t now     = readButtonsHeld();
 uint8_t pressed = now & (uint8_t)~before;   // 1 where a button went from released to pressed
 before = now;
-if (bitTest(pressed, 0)) { cCount++; showCount(); }
+if (bitTest(pressed, 0)) cCount++;
 \end{lstlisting}
-\textbf{Expected} (TA measurement): natural presses 20 to 23 per 20; very light, slow presses about 26 per 20.
+\textbf{Expected} (TA measurement): natural presses 20 to 23 per 20. \textbf{Measured} (2026-11-04, one round):
+\texttt{C3: count=23}.
 \textbf{Answer:} a mechanical contact bounces: while it closes or opens, it makes and breaks contact several times
 within about a millisecond. A read that falls in such a gap sees ``released'', the next one ``pressed'', and the edge
-counter counts an extra press. The bounce pulses are shorter than one read (110\,$\mu$s), so only some are caught,
-and the count is sometimes 20, sometimes more. A light, slow press keeps the contact near its switching point for
-longer, so it bounces more.
+counter counts an extra press. The bounce pulses are shorter than one read (about 0.1\,ms), so only some are caught,
+and the count is sometimes 20, sometimes more.
 
 \subsection*{C.4 Debounced}
 \begin{lstlisting}
@@ -320,12 +356,16 @@ uint8_t debounceUpdate(Debouncer *d, uint8_t sample, uint32_t tick, uint32_t sta
     return 0;
 }
 \end{lstlisting}
-\textbf{Expected:} 20 of 20 in every round, light presses too. A bounce gap restarts the 20\,ms timer, so the new state
-is accepted only once the contact has settled.
+\textbf{Measured} (2026-11-04): \texttt{C4: count=20} (a first round gave 19, most likely 19 presses: the
+repeated round, counted aloud, gave 20). \textbf{Expected:} 20 of 20 in every round. A bounce gap restarts the 20\,ms timer, so the new state is accepted only
+once the contact has settled.
 
 \subsection*{C.5 Missing presses}
 \textbf{Expected} (TA measurement, quick taps of 110 to 130\,ms, \texttt{HAL\_Delay(150)}): debounced (35) 0 of 20,
-edge (36) about 11 of 20.
+edge (36) about 11 of 20. \textbf{Measured} (2026-11-04, one round of quick taps each): debounced
+\texttt{C5: count=0}, edge \texttt{C5: count=13}. Button~1 has to be held a little longer here, at least one loop
+period of 151\,ms, or the round does not end: a normal quick press of button~1 was missed on the board, and the round
+ended only when it was held for about 1\,s.
 
 \textbf{Answer.} With the delay, the button is read once per loop pass, about 151\,ms (\texttt{HAL\_Delay(150)} waits
 at least 150\,ms and up to 151, plus 0.1\,ms for the read). A tap shorter than that is seen by at most one read, or by
@@ -342,8 +382,7 @@ loop short (non-blocking code, Part~D) or to let the input interrupt the program
 Version & Round 1 & Round 2 & Round 3 & Expected \\
 \midrule
 C.2 level & & & & tens of thousands, different each round \\
-C.3 edge, natural & & & & 20 to 23 \\
-C.3 edge, light & & & & about 26 \\
+C.3 edge & & & & 20 to 23 \\
 C.4 debounced & & & & 20 \\
 C.5 debounced + delay & & & & 0 \\
 C.5 edge + delay & & & & about 11 \\
@@ -367,7 +406,7 @@ for (d1Toggles = 0; d1Toggles < 200; )
 }
 d1TotalMs = HAL_GetTick() - start;
 \end{lstlisting}
-\textbf{Expected:} $200 \times 500\,\text{ms} = 100\,000$\,ms by calculation; measured about 101\,200\,ms.
+\textbf{Expected:} $200 \times 500\,\text{ms} = 100\,000$\,ms by calculation; measured 101\,201\,ms (predicted below: 101\,200).
 
 \textbf{Answer.} Two things add to the 500\,ms:
 \begin{itemize}
@@ -471,11 +510,12 @@ Theory & 10\,000\,ms & 7\,692\,ms & 10 periods \\
 
 \section{Part E: integration and logic}
 \run{Write \lv{task} = 51. Button~0
-arms and disarms (LD2 is on while armed). PuTTY shows \texttt{E: armed=<0|1> obstacle=<0|1> v=<value>} whenever
-\emph{armed} or the obstacle changes, and when a brightening reaches 255 or a dimming reaches 0 (\texttt{v} is the
-value given to \texttt{setRGB}, after \texttt{gamma2}). Hold a hand in front of the IR sensor for an obstacle. \lv{eStepMs} = 40 and
-\lv{eStepSize} = 5 give 51 steps of 40\,ms, about 2\,s from off to full; \lv{eUseGamma} = 1 makes the steps look even
-to the eye (\texttt{gamma2} of \texttt{io\_board.h}), 0 gives linear values.}
+arms and disarms (LD2 is on while armed), also during a brightening. PuTTY shows \texttt{E: armed=<0|1>
+obstacle=<0|1> v=<value>} whenever \emph{armed} or the obstacle changes, and when a brightening reaches 255, just
+before the LEDs switch off (\texttt{v} is the value given to \texttt{setRGB}, after \texttt{gamma2}). Hold a hand in
+front of the IR sensor for an obstacle. \lv{eStepMs} = 40 and \lv{eStepSize} = 5 give 51 steps of 40\,ms, about 2\,s
+from off to full; \lv{eUseGamma} = 1 makes the steps look even to the eye (\texttt{gamma2} of \texttt{io\_board.h}),
+0 gives linear values.}
 
 \paragraph{Truth table of the trigger condition.}
 \begin{center}
@@ -497,35 +537,38 @@ armed & obstacle & condition \\
   every edge/.style={draw,->},font=\small]
   \node[state,initial,initial text={}] (off) {OFF\\level 0};
   \node[state,right=of off] (rise) {RISING\\level $\uparrow$};
-  \node[state,below=of rise] (fall) {FALLING\\level $\downarrow$};
   \node[state,right=of rise] (done) {DONE\\LEDs off};
-  \path (off)  edge[bend left=15] node[above] {condition} (rise)
+  \path (off)  edge node[above] {condition} (rise)
         (rise) edge node[above] {level = 255} (done)
-        (rise) edge[bend left=15] node[right] {not condition} (fall)
-        (fall) edge[bend left=15] node[left] {condition} (rise)
-        (fall) edge[bend left=20] node[below left] {level = 0} (off)
-        (done) edge[bend right=45] node[above] {not condition} (off);
+        (done) edge[bend left=35] node[below] {not condition} (off);
 \end{tikzpicture}
 \end{center}
-In RISING the level grows by \lv{eStepSize} every \lv{eStepMs}; when 255 has been shown for one step, the LEDs switch
-off (DONE), and stay off until the condition is false (back to OFF) and then true again. In FALLING the level drops by
-one step every \lv{eStepMs}, from wherever it was, down to 0. The assignment does not say what happens if the condition
-returns during the dimming; this solution brightens again from the current level.
+In RISING the level grows by \lv{eStepSize} every \lv{eStepMs}, whatever the condition does; when 255 has been shown
+for one step, the LEDs switch off (DONE). DONE waits until the condition is false, and only then goes back to OFF, where
+the next true condition starts a new brightening. So the condition must become false and then true again after a
+brightening has ended. If it went false and back to true during the brightening, it is still true in DONE, and nothing
+more happens.
 
-\paragraph{The main loop.} The button (debounced, as in C.4) and the IR sensor are read on every pass; the state
-changes as soon as the condition changes; the brightness steps are paced by \texttt{HAL\_GetTick}. Nothing waits, so
-an obstacle or a press is never missed (compare C.5).
+\paragraph{The main loop.} The button (debounced, as in C.4) and the IR sensor are read on every pass; the brightness
+steps are paced by \texttt{HAL\_GetTick}. Nothing waits, so a press or an obstacle change is never missed (compare C.5),
+also during a brightening: \emph{armed} still toggles, and its line is printed, but the brightening goes on.
 
 \paragraph{Test sequence} (also the content of the video \texttt{V\_E}):
 \begin{enumerate}
   \item Disarmed, obstacle: nothing happens (condition 0).
   \item Arm (LD2 on), no obstacle: nothing happens.
-  \item Armed, hold the obstacle: the LEDs brighten for about 2\,s, then switch off (DONE). Keep the hand there: they stay
-        off.
+  \item Armed, hold the obstacle: the LEDs brighten for about 2\,s, then switch off (DONE). Keep the hand there: no
+        second brightening.
   \item Remove the hand (OFF) and bring it back: a new brightening.
-  \item Remove the hand halfway through: the LEDs dim from their current level to off.
-  \item Disarm with the button halfway through a brightening: the LEDs dim (the condition is false).
+  \item Remove the hand, or disarm, halfway through a brightening: it still runs to its end.
 \end{enumerate}
+\see{Run on the cart (2026-11-04): armed with an obstacle, \texttt{E: armed=1 obstacle=1 v=255} came 2.07\,s after the
+obstacle; the hand kept 3\,s more gave nothing; removed and brought back, a new brightening (again 2.06\,s); disarmed, an
+obstacle gave nothing.}
+\textbf{The IR level.} On our cart PA7 is \textbf{HIGH} when there is an obstacle (the hardware test project assumed
+LOW), so the solution compares with \texttt{IR\_OBSTACLE\_LEVEL} = \texttt{GPIO\_PIN\_SET} (\texttt{ass1.h}). The
+instructions now have the students find the level of their own cart first; accept either level, if the report gives it
+and the code uses it.
 
 \section{Grading notes}
 \begin{itemize}
@@ -533,17 +576,22 @@ an obstacle or a press is never missed (compare C.5).
         \texttt{task} protocol makes the test fail. C.1 to C.5 and E are graded from the videos \texttt{V\_C} and
         \texttt{V\_E}. The test does not see the RGB LEDs of B.2, B.3 and D.3: check in the code that they are lit
         from the variable's bits.
-  \item A.1: binary needs a function of their own; the start values and the 12 steps are fixed. A.2: the explanation of \texttt{FFFFFFF0} (promotion and sign extension) is the key point.
+  \item A.1: \texttt{printBinary} is provided; they must call it from a line-printing function of their own (a
+        line built by hand bit by bit, or a different binary function, is fine too). The start values and the 12 steps are fixed. A.2: the explanation of \texttt{FFFFFFF0} (promotion and sign extension) is the key point.
   \item B.2 and B.3: patterns chosen with \texttt{if}/\texttt{switch}, a counter mapped to LEDs, or a table, are not
         accepted (the rule in the assignment). The rotation line, or an equivalent \texttt{if (p \& 0x80)} that then uses
         only bit operations, is.
-  \item C: the explanation must use the press duration and the loop time; the table holds C.2 to C.5.
+  \item C: no LEDs in C.2 to C.5. Button~1 ends a round and prints once (its bounces must not print a second line);
+        nothing is printed while counting. The video shows one round of 20 per version; the report table holds the
+        3 rounds of C.2 to C.5. The explanation must use the press duration and the loop time.
   \item D.1: both the UART time (5.2\,ms per line) and the extra tick of \texttt{HAL\_Delay} explain the difference; the
         UART is the larger one.
   \item D.3: the blocking version must show that both LEDs end up at the same rate; the non-blocking version must be
         within a few ms of the theory, and the report must explain any remaining difference.
-  \item E: the inputs must be read on every pass (no \texttt{HAL\_Delay} in the stepping); the truth table and a state
-        diagram with the condition on every transition are required.
+  \item E: no dimming. A brightening always runs to its end; the next one needs the condition to become false and
+        then true after that end. The inputs must be read on every pass, also during a brightening (no
+        \texttt{HAL\_Delay} in the stepping); the truth table and a state diagram with the condition on its
+        transitions are required.
 \end{itemize}
 
 \end{document}

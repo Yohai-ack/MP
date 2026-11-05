@@ -51,6 +51,9 @@ static uint8_t handleEdge(uint32_t capture)
 /* ------------------------------------------------------------------ */
 static void startTrigger(void)
 {
+  haveRise     = 0;                                /* a fresh start */
+  readingCount = 0;
+  missedCount  = 0;
   __HAL_TIM_SET_COMPARE(&htim5, TIM_CHANNEL_1, SONAR_TRIG_COUNTS);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);        /* TRIG, PB2  */
 }
@@ -65,6 +68,15 @@ void sonarStartInterrupt(void)
 {
   HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_2);      /* ECHO, PC12 */
   startTrigger();
+}
+
+void sonarStop(void)
+{
+  HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_1);         /* no more triggers   */
+  HAL_TIM_IC_Stop_IT(&htim5, TIM_CHANNEL_2);       /* stops both modes:  */
+  __HAL_TIM_CLEAR_FLAG(&htim5, TIM_FLAG_CC2 | TIM_FLAG_CC2OF); /* and the
+                                                      flags of a last edge */
+  haveRise = 0;
 }
 
 /* ------------------------------------------------------------------ */

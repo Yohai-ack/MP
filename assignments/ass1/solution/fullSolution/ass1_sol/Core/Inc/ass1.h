@@ -44,6 +44,8 @@ enum
 extern volatile uint8_t task;        /* Live Expressions: what runs    */
 
 #define LED_LEVEL   80u              /* "on" brightness of an RGB LED  */
+#define IR_OBSTACLE_LEVEL GPIO_PIN_SET   /* PA7 level of an obstacle: depends on the cart's
+                                            sensor module (HIGH on ours, 2026-11-04) */
 
 /* ------------------------------------------------------------------ */
 /* shared helpers (ass1_common.c)                                      */

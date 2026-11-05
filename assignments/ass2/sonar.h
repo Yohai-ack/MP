@@ -14,12 +14,14 @@
  *          The raw reading has NO physical unit. Find the factor that turns it
  *          into millimetres yourself, by measuring known distances.
  *
- *          Use ONE of the two modes:
- *            Polling   (Part B.1): sonarStartPolling(), then call sonarPoll()
+ *          Use ONE of the two modes at a time:
+ *            Polling   (B.2):      sonarStartPolling(), then call sonarPoll()
  *                                  in the main loop.
- *            Interrupt (Part B.2): sonarStartInterrupt(), then call
+ *            Interrupt (B.1, B.3): sonarStartInterrupt(), then call
  *                                  sonarCaptureEdge(htim) from your own
  *                                  HAL_TIM_IC_CaptureCallback().
+ *          Call sonarStop() when the task that uses the sensor ends, before
+ *          another task starts it in the other mode.
  *
  * @course  Microprocessor-Based Product Design, Technion
  ******************************************************************************
@@ -38,10 +40,13 @@
 #define SONAR_TRIG_COUNTS 170u
 
 /* ------------------------------------------------------------------ */
-/* Start: call ONE of these once, after the MX_..._Init() calls        */
+/* Start: call ONE of these when a task starts (after the MX_..._Init() */
+/* calls). Starting also sets the two counts below back to 0.          */
 /* ------------------------------------------------------------------ */
 void     sonarStartPolling(void);    /* capture without interrupt      */
 void     sonarStartInterrupt(void);  /* capture with the TIM5 interrupt */
+void     sonarStop(void);            /* stop the trigger and capture,
+                                        in either mode                 */
 
 /* ------------------------------------------------------------------ */
 /* Edge handling: returns 1 when a new raw reading is ready, else 0    */

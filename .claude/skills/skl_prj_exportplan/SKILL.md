@@ -1,6 +1,6 @@
 ---
 name: skl_prj_exportplan
-description: Build the local export folder of the MP course (STM32 repo) from the files in git. Produces export/MP2026_plan.pdf and .docx, export/coursePolicies.pdf, export/assN/assN_instructions.pdf with each assignment's provided files, and export/tutorials/ with one PDF per tutorial section of the deck. Use when Yohai invokes /skl_prj_exportplan or asks to export, publish-prepare or regenerate the plan, assignment and tutorial PDFs.
+description: Build the local export folder of the MP course (STM32 repo) from the files in git. Produces export/MP2026_plan.pdf and .docx, export/coursePolicies.pdf, export/assN/assN_instructions.pdf with each assignment's provided files, export/quizzes/quizN_en.pdf and quizN_he.pdf (student versions, no solutions), and export/tutorials/ with one PDF per tutorial section of the deck. Use when Yohai invokes /skl_prj_exportplan or asks to export, publish-prepare or regenerate the plan, assignment and tutorial PDFs.
 ---
 
 # skl_prj_exportplan: build the export folder
@@ -16,6 +16,12 @@ Everything in `export/` is generated from files in git, so the folder is git-ign
 | `export/MP2026_plan.docx` | the same, via `skl_glb_tex2Word`'s `tex2word.py` | made from a copy in `export/_build`, so the repo's own `MP2026_plan.docx` is never touched (CLAUDE.md rule) |
 | `export/coursePolicies.pdf` | `\section{Course policies}` of the plan | red flags and yellow `\bnote{}` remarks **removed** (student-facing; same for the assignment PDFs) |
 | `export/assN/assN_instructions.pdf` | `\subsection{Assignment N: ...}` of the plan, up to the next `\subsection` | red flags **removed**; one folder per assignment found in the plan |
+| `export/quizzes/quizN_en.pdf` | `\subsection{Quiz N}` of the plan, up to the next `\subsection` | the **student version**: every `solution` environment and `\correct` mark removed, red flags removed, `\answerspace{h}` becomes empty space to write in |
+| `export/quizzes/quizN_he.pdf` | the `%HE ` comment lines inside `\subsection{Quiz N}` of the plan (compiled with `lualatex`; the Hebrew preamble is `HEBREW_PREAMBLE` in the script) | the same quiz in Hebrew, student version, made the same way. Professional terms (bit, hex, ...) and all code stay in English. A quiz with no `%HE` lines is a `[FAIL]` |
+
+**The only source is `MP2026_plan.tex`.** The Hebrew quizzes live in it as comment lines (`%HE ...`), which pdflatex
+and the Word copy ignore; there is no separate quiz `.tex` file, and the export never writes source files outside
+`export/_build`.
 | `export/assN/<files>` | the top-level files of `assignments/assN/` | the files students get; subfolders (`solution/`) are **never** copied |
 | `export/tutorials/Tutorial1.pdf`, `Tutorial2.pdf`, ... | each section of `tutorials/MP_tutorials_2026.pptx` | named from the section's number ("Tutorial 3: ..." gives `Tutorial3.pdf`, "Session 13" gives `Session13.pdf`); hidden slides left out; a section with no slides is skipped |
 
@@ -43,11 +49,17 @@ succeeded, and kept when something failed (to read the logs). `--keep-build` kee
    - Open one student PDF (`export/ass1/ass1_instructions.pdf`) with `pymupdf` and confirm no red `[...]` notes are
      left and the headings look right.
    - Compare the list of tutorial PDFs with the deck's sections.
+   - **Quizzes:** open both student PDFs of each quiz and confirm that no answer is left: no `[correct]`/`[נכון]`, no
+     "Solution."/"פתרון", no solution code (only the code the question gives), no "What to check". Check that the
+     `%HE` lines still match the English quiz above them (the same questions, options, given code and order: they are
+     kept in step by hand); if not, tell Yohai.
+     A quiz in the plan must keep its answers inside `\begin{solution}...\end{solution}` and its correct options
+     marked with `\correct`, or they leak into the student version.
 4. **Report** in a short table: each output, OK or not, and for `assN` the provided files that were copied. Remind Yohai
    that `export/` is local only (not in git) and that the PDFs for students still need a human read before publishing
    (the red flags are removed automatically, but blue "less important" text stays as normal text).
 
 ## Requirements
 
-`pdflatex` on PATH, Python with `pypandoc_binary` and `python-docx` (for the .docx), Microsoft PowerPoint (for the
+`pdflatex` and `lualatex` on PATH (lualatex, with babel and the Windows font David, for the Hebrew quizzes), Python with `pypandoc_binary` and `python-docx` (for the .docx), Microsoft PowerPoint (for the
 tutorials, through COM), and the global skill `skl_glb_tex2Word` (its `tex2word.py`).

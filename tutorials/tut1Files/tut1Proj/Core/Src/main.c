@@ -46,10 +46,7 @@ UART_HandleTypeDef hlpuart1;
 
 /* USER CODE BEGIN PV */
 uint32_t wCounter=0;
-uint8_t aUint=0;
-int8_t bInt,stop=0;
-
-
+uint8_t aVar=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,16 +101,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  { wCounter ++;
-
-  aUint ++;
-  if (bInt>126)
-  	  {stop=1;
-  	HAL_Delay(1000);
-    }
-  bInt ++;
-  HAL_Delay(100);
-
+  {wCounter++;
+  /*a ++;*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
