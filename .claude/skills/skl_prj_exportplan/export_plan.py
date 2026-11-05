@@ -150,14 +150,20 @@ def export_plan_and_sections(word):
     shutil.copy2(PLAN, d / PLAN.name)
     pdflatex(d / PLAN.name, OUT / "MP2026_plan.pdf")
 
-    # 2. its Word copy, made from the copy in _build (the repo's .docx is never touched)
+    # 2. its Word copy, made from a copy in _build (the repo's .docx is never touched). The %HE lines
+    #    (the Hebrew quizzes) are dropped first: they are comments for pdflatex, but pandoc reads the
+    #    ones inside a lstlisting as code
     if word:
         if not TEX2WORD.exists():
             log("MP2026_plan.docx  (tex2word.py not found)", "FAIL")
         else:
-            r = subprocess.run([sys.executable, str(TEX2WORD), str(d / PLAN.name), "--overwrite"],
+            w = BUILD / "word"
+            w.mkdir(parents=True)
+            (w / PLAN.name).write_text("".join(l for l in tex.splitlines(keepends=True)
+                                               if not l.startswith("%HE")), encoding="utf-8")
+            r = subprocess.run([sys.executable, str(TEX2WORD), str(w / PLAN.name), "--overwrite"],
                                capture_output=True, text=True, errors="replace")
-            docx = d / "MP2026_plan.docx"
+            docx = w / "MP2026_plan.docx"
             info = " ".join(l for l in r.stdout.splitlines() if l.startswith(("TABLES=", "LEAKS=")))
             if r.returncode == 0 and docx.exists():
                 shutil.copy2(docx, OUT / "MP2026_plan.docx")
