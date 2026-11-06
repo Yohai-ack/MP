@@ -186,22 +186,22 @@ Follow them, or you will lose points needlessly.\par}
 
 \subsection{Assignment 1: ``No wheels''}
 
-\textbf{Learning outcome.} Students will be exposed to C programming on real hardware. They will learn to choose
-appropriate variable types, predict and explain overflow and wrap-around, manipulate individual bits with shifts and
-masks, use inputs (buttons and a sensor) to change what the program does, and produce timed LED behaviour on the
-hardware, driven by the microcontroller. At this stage, some communication paths inside the system, e.g.\ the I2C bus,
-are treated at a high level; we look into them later in the course.
+\textbf{Learning outcome.} Students will be introduced to C programming on real hardware. They will learn to select
+appropriate variable types, predict and explain overflow and wrap-around, manipulate individual bits using shifts and
+masks, use inputs (buttons and a sensor) to modify the program's behaviour, and produce timed LED behaviour on the
+hardware, driven by the microcontroller. At this stage, we treat some internal communication paths (e.g., the I2C
+bus) at a high level; we cover them later in the course.
 
 \medskip\noindent
 \textbf{Provided files:}
 \begin{itemize}
 \item \texttt{ass1.ioc}: the project configuration. It connects the hardware used in this assignment (LEDs, buttons,
-      sensor) to the pins of the microcontroller, and contains only what this assignment needs. Turn it into a
+      sensor) to the pins of the microcontroller and contains only what this assignment needs. Turn it into a
       CubeIDE project as shown in tutorial~1; you do not need to change it.
 \item \texttt{io\_board.h} and \texttt{io\_board.c}: ready-made functions for the RGB LEDs and the push buttons of the
       IO board, which talk to the board over a communication bus called I2C. Copy \texttt{io\_board.h} to
       \texttt{Core/Inc} and \texttt{io\_board.c} to \texttt{Core/Src}, add \texttt{\#include "io\_board.h"} to
-      \texttt{main.c}, and call \texttt{ioBoardInit()} once, in the \texttt{USER CODE BEGIN 2} section.
+      \texttt{main.c}, and call \texttt{ioBoardInit()} once in the \texttt{USER CODE BEGIN 2} section.
 \end{itemize}
 
 \medskip\noindent
@@ -262,12 +262,13 @@ the part, the units digit the item:
 \smallskip\noindent
 Rules for the program:
 \begin{itemize}
-  \item It starts idle (\texttt{task} = 0). When \texttt{task} gets a new number, the program prints
+  \item It starts idle (\texttt{task} = 0). When the variable \texttt{task} gets a new number, the program prints
         \texttt{=== task N ===} and runs task N.
   \item Every task checks \texttt{task} on every pass of its loop, and returns as soon as it changes. Before the next
         task starts, LD2 and all the RGB LEDs are switched off.
-  \item A task that has an end prints \texttt{=== task N done ===} when it finishes, and then waits until \texttt{task}
-        changes. To run a task again, write 0 and then its number again.
+  \item A task that finishes by itself (not every task does: some run until the variable \texttt{task} changes) prints
+        \texttt{=== task N done ===} and then waits until \texttt{task} changes. To run it again, write 0 and then
+        its number again.
   \item A number that is not in the table prints \texttt{no task N}.
 \end{itemize}
 Start from this skeleton. Write one function per task, and add a \texttt{case} for each one:
@@ -410,7 +411,7 @@ speed, then button~1. The hints say roughly what to expect; your report explains
         as briefly as you can. Repeat with the edge-based version of C.3 and the same delay (task 36).
         \textbf{Expect} much less than 20 in both versions, and even fewer in the debounced one.
         \textbf{Hint:} here, press button~1 for quite a long time (about half a second) to end a round; a quick press
-        can be missed, for the same reason.
+        can be missed for the same reason.
 \end{enumerate}
 In your report, put all the results of C.2 to C.5 in one table and explain the differences, using the duration of a
 press and the time of one loop pass. Explain why presses are lost in C.5, and why the debounced version loses more of
@@ -443,8 +444,10 @@ and its result line. One representative round per version is enough for the vide
 \end{enumerate}
 
 \paragraph{Part E: Integration and logic.}
-\textbf{Notice that the level of the IR sensor might be different in each car, so it is up to you to find weather an obstacle is HIGH or LOW. For the code to be able to run easily on all the cars, use define, and write both lines of \texttt{\#define IR\_OBSTACLE\_LEVEL GPIO\_PIN\_SET} AND \texttt{\#define IR\_OBSTACLE\_LEVEL GPIO\_PIN\_RESET} where one of them is commented out, and compare with it wherever you
-read the sensor }
+\textbf{The IR sensor level may differ between cars, so you must determine whether an obstacle is HIGH or LOW. For
+the code to be able to run easily on all the cars, use \# define and write both lines of
+\texttt{\#define IR\_OBSTACLE\_LEVEL GPIO\_PIN\_SET} AND \texttt{\#define IR\_OBSTACLE\_LEVEL GPIO\_PIN\_RESET} where
+one of them is commented out and compare with it wherever you read the sensor.}
 
 \smallskip\noindent
 Write a program with an \emph{armed} state that button~0 toggles: each press arms or disarms the system. The trigger
