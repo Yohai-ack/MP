@@ -356,6 +356,65 @@ honest description. Automatic test of the new version: ref good all "works good"
 caught (A.3.1, B.3.2 readings=0, C.5, D.1.3 factor 1.00). **Yohai: no more cart re-tests just because carts differ**:
 we check the code and the coherence of the instructions, not a specific cart. All "Yohai, on the cart" flags are gone;
 Yohai will not film trial videos.
+**A3 rewritten (2026-11-07, Yohai):** wheels on the ground, so no Live Expressions there: `task` 120 (A.2, air) and
+220 (B.2 sensor measurements) with the cable; IO-board buttons for the floor: 0 = A.3, 1 = obstacle course (5 s
+delay), 2 = send the data recorded in RAM (cable plugged back in, MATLAB recording), 3 = emergency stop (read on every
+pass, ends the program until RESET, but button 2 still sends the data). All four encoders TI1 and TI2 in ass3.ioc.
+Videos V_A (A.3) and V_B (whole course + one emergency stop). Lines `A2:`/`A3:` (t r w1..w4 u1..u4), `B3:` (t c1..c4).
+A3 is meant to be **open-minded** (many solutions): the instructions only say to use the sonar with its servo to choose
+the side; obstacles have no known size. **Logic wanted in the A3 reference solution (Yohai):** at an obstacle, scan
+with the servo to decide which side is better; if at the gimbal limit the obstacle is still seen, move the cart a bit
+sideways to each side, scan again, and only then decide left or right. **The course:** two cases (obstacle positions
+and sizes) published later, so the algorithm is not tailored; one video per case (V_B1, V_B2).
+**USB re-plug tested on the cart (2026-11-07, socket supply, temporary scratch program):** unplugging leaves the program
+running (LD2 blinks), but **plugging the ST-LINK USB back in resets the board** (reset cause PINRSTF, `up` restarted).
+RAM in a `.noinit` linker section (NOLOAD, after `.bss`) survives that reset (a counter went on 92 to 120). So A3 tells
+students to add the `.noinit` section to `STM32G474RETX_FLASH.ld` and keep the recorded arrays, sample count and a magic
+"valid" word there; button 2 sends them after the restart. Red flag left: check the same with the cart on its battery.
+**Wheel positions (2026-11-07, Yohai at the cart, ass2_sol task 510, encoder counters read over SWD):** motor 1 = rear
+right (TIM1), 2 = rear left (TIM8), 3 = front left (TIM3), 4 = front right (TIM4); each motor moved only its own timer, as
+in the A2 table, now with the positions in brackets. 1 s at 30 % gave 1,664 / 742 / 1,548 / 727 counts: motors 2 and 4
+about half: **slower motors, not resolution** (by hand all four give 1,320 per turn, measured the same day).
+**Car-specific parameters (Yohai, 2026-11-07):** the A3 solution keeps them per car in
+`assignments/ass3/solution/fullSolution/ass3_sol/Core/Src/car_params.c` (+ `Core/Inc/car_params.h`): `carParamsGet(id)`
+returns motorDir, encDir (+1/-1), countsPerRev, K, tau, Kp, Ki, maxVelCmdNoSat (4 each) and the design goals
+(designOvershoot 1, designTauC 0.032 s; Yohai first asked for overshoot 1.05 and settling 0.1 s, then chose the
+closed-loop time constant as the clearer goal, also in A3 A.1: "no overshoot and tau_c, PI zero on the motor pole,
+tau_c not below about 30 ms at 100 Hz"). The A3 solution will start with a variable that selects the car. **Car 12** measured 2026-11-07
+(wheels in the air, socket supply 12 V): motorDir -1/+1/+1/-1, encDir +1/-1/-1/+1, 1,320 counts/rev, K 2.76/1.57/2.49/
+2.23 rad/s per V, tau 0.082/0.091/0.087/0.104 s (50 % step). Step data in `fullSolution/car_data/`.
+**PI design (redone the same day, Yohai's point: a linear loop does not care about the step size):** the first gains
+were searched in a simulation WITH the 12 V limit at a 10 rad/s step, so they met the goals only by saturating (linear:
+overshoot 1.11 to 1.52). Now designed on the linear loop (PI every 10 ms, speed over the last 10 ms, ZOH, no limit):
+PI zero on the motor pole, Ki = Kp/tau, Kp = tau/(K tc), the same tc = 0.032 s for all four wheels (they respond alike),
+the slowest tc that meets the goals with a 20 % margin on settling. Car 12: Kp 0.921/1.804/1.087/1.451, Ki
+11.31/19.93/12.57/14.02; simulated overshoot 1.000, settling 0.079 to 0.082 s. (With the 10 ms loop, tc = 0.025 gives
+0.040 s, not 4 tc.) `maxVelCmdNoSat` (Yohai): the largest step from rest whose PI output stays within 90 % duty
+(10.8 V), transient included; the peak is the first sample, Kp + Ki x 0.01 per rad/s: 10.44 / 5.39 / 8.90 / 6.79 rad/s.
+**Skill `/skl_prj_getCarParams X` (2026-11-07):** `.claude/skills/skl_prj_getCarParams/` (SKILL.md + `car_params_tool.py`:
+prepare, spin N, cnt, steps, write) runs the three steps interactively (directions, 3 hand turns, 50 % steps) and
+writes car X's entry into car_params.c; the step build is a CLEAN build of a patched ass2_sol copy (a stale build ran
+wheels backward once). **A3 reference solution (2026-11-07, NOT yet run on the cart):**
+`assignments/ass3/solution/fullSolution/ass3_sol/` (copy of ass2_sol: `ass3_sol.ioc` with all four encoders TI1 and
+TI2, `.noinit` in STM32G474RETX_FLASH.ld, `carId = 12` in main.c USER CODE PV). Files: ass3_tasks.c (dispatcher,
+buttons read by its own I2C call so 3 bus errors in a row = emergency stop, since readButtonsRaw returns 0xFF on
+error; callbacks), ass3_wheels.c (PI at 100 Hz in TIM6 with conditional anti-windup, motorDir/encDir from the car,
+Mecanum motions, odometry), ass3_io.c (IR, sonar mm with median of 3, servo), ass3_record.c (`.noinit`: A 200 x 9
+floats, B 12,000 x 4 int8 counts per 10 ms + state = 120 s; 67 KB at 0x200005FC, below the CCM alias), partA.c (120
+and button 0), partB.c (course state machine: FORWARD, SCAN 13 directions, PROBE = Yohai's sideways-and-rescan logic,
+SIDESTEP, PASS with the sonar turned to the obstacle, RETURN; task 220). Speed: every wheel at 0.9 x the smallest
+maxVelCmdNoSat (car 12: 4.85 rad/s); motions change only through a stop, so no step saturates. **Cart sizes (Yohai,
+2026-11-07):** wheel radius 30 mm; wheel centres 165 mm front to rear, 210 mm left to right; stop distance STOP_MM 80.
+The side is never fixed in advance: the course takes the side that needs the shorter sideways move. STRAFE_SIGN is
+only the Mecanum kinematics (+1: wheels 2 and 4 forward, 1 and 3 back moves the cart left; usual X rollers), to
+confirm once on the floor (red flag in the A3 section of the plan). Overall size: 240 mm wide (outside of the
+wheels), 300 mm long (sensors to the rear): CAR_HALF_WIDTH_MM 120, CAR_LENGTH_MM 300.
+**Servo and IR are car parameters** (car_params.c: irObstacleLevel, servoUs {900, 1500, 2100} = the course's range,
+servoDeg); measured by step 5 of the skill with TA task 900 of ass3_sol (the servo follows `calServoUs`, the IR pin
+printed). Car 12 (2026-11-07): IR pin 1 = obstacle; servo 900 us 62 deg left, 1500 us 5 deg left, 2100 us 62 deg
+right (so straight ahead is about 1545 us, and a longer pulse turns right). The course interpolates between the three
+points. The `.ioc` key `TIMx.EncoderMode=TIM_ENCODERMODE_TI12` was written by
+hand (main.c has TI12 too); not yet opened in CubeMX. Builds with 0 warnings (-Wall -Wextra).
 **A2 reference solution (2026-10-29):** `assignments/ass2/solution/fullSolution/ass2_sol/`
 (CubeIDE project; `ass2_sol.ioc` = the TA's ass2.ioc, built from ass1.ioc + the configuration section and checked in
 the generated code; builds with 0 warnings) and `ass2_sol.tex` (TA report; the PDF is git-ignored). The constants were measured

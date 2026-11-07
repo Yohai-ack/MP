@@ -1213,10 +1213,10 @@ encoder is read by its own timer in encoder mode.\leavevmode\\[2pt]
 \toprule
 Motor & PWM pin & DIR pin & Encoder timer & Encoder pins (A, B) \\
 \midrule
-1 & PA0 = TIM2\_CH1 & PC2 (DIR1) & TIM1 & PC0 = TIM1\_CH1, PC1 = TIM1\_CH2 \\
-2 & PA1 = TIM2\_CH2 & PB4 (DIR2) & TIM8 & PC6 = TIM8\_CH1, PC7 = TIM8\_CH2 \\
-3 & PB10 = TIM2\_CH3 & PB11 (DIR3) & TIM3 & PA6 = TIM3\_CH1, PA4 = TIM3\_CH2 \\
-4 & PA10 = TIM2\_CH4 & PB13 (DIR4) & TIM4 & PA11 = TIM4\_CH1, PA12 = TIM4\_CH2 \\
+1 (rear right) & PA0 = TIM2\_CH1 & PC2 (DIR1) & TIM1 & PC0 = TIM1\_CH1, PC1 = TIM1\_CH2 \\
+2 (rear left) & PA1 = TIM2\_CH2 & PB4 (DIR2) & TIM8 & PC6 = TIM8\_CH1, PC7 = TIM8\_CH2 \\
+3 (front left) & PB10 = TIM2\_CH3 & PB11 (DIR3) & TIM3 & PA6 = TIM3\_CH1, PA4 = TIM3\_CH2 \\
+4 (front right) & PA10 = TIM2\_CH4 & PB13 (DIR4) & TIM4 & PA11 = TIM4\_CH1, PA12 = TIM4\_CH2 \\
 \bottomrule
 \end{tabularx}
 
@@ -1286,61 +1286,150 @@ Address (7-bit) & Chip & Role \\
 
 \subsection{Assignment 3: ``Wheels on the ground''}
 
-\flag{Yohai: add a task with the servo-scanned sonar (the servo turns the ultrasonic sensor and the program builds a
-map of the distances). It is not in Assignment~2, which uses the sonar and the servo only separately (Part~B and C.5).}
-
-\textbf{Window:} out at session~11, due on 3.3.2027. The assignment may use everything taught up to and including
-session~12.\quad
-\textbf{Hardware:} the cart \textbf{on the floor}, battery and motor power on, the IR sensor, the ultrasonic sensor on
-its servo, and three obstacles.\quad
+\textbf{Hardware:} the cart \textbf{on the floor} (for A.2, on its block with the wheels in the air), battery and motor
+power on, the IO board, the IR sensor, the ultrasonic sensor on its servo, and three obstacles.\quad
 \textbf{Project:} \texttt{ass3.ioc}, a copy of your \texttt{ass2.ioc} (\emph{File $\to$ Save Project As}, as in
-Assignment~2). No new pins or peripherals are needed.
-\flag{Bucher and Yohai: the obstacles (size, material that the ultrasonic sensor sees well, spacing along the path),
-the length of the course and the floor area in Room 26.}
+Assignment~2). One change: set all four encoder timers (TIM1, TIM8, TIM3 and TIM4) to \emph{Encoder Mode TI1 and TI2},
+the mode with the better resolution in Assignment~2 D.1. No new pins or peripherals are needed.
+\textbf{The course.} So that your algorithm is not tailored to one specific layout, two cases, each defining the
+positions and sizes of the obstacles, will be published later. Your program must handle both.
 
 \medskip\noindent
-\textbf{Learning outcome.} Students design a PI speed controller from their own plant model and run it on the
-cart; they drive the cart in straight lines from the wheel kinematics; they combine two sensors with different strengths
-into one decision and justify the strategy; they structure a driving task as a state machine.
+\textbf{Provided files.} As in Assignment~2: \texttt{sonar.h} and \texttt{sonar.c}, and the \texttt{printf} redirect of
+tutorial~2. Use the IO board through your own driver of Assignment~2 Part~C, or through \texttt{io\_board.c}.
 
 \medskip\noindent
-\textbf{Safety.} Test at low speed first. B1 must stop all four wheels at any moment, in every state of your program.
-Keep the cart inside the test area and catch it if it drives towards people or furniture.
+\textbf{Learning outcome.} Students design a PI speed controller from their own plant model and run it on the cart;
+they drive the cart in straight lines using the wheel kinematics; they run a program without a cable, operated by
+buttons, and analyse its recorded data afterwards; they combine two sensors with different strengths into one decision
+and justify the strategy; they structure a driving task as a state machine.
+
+\medskip\noindent
+\textbf{Safety.} Test at low speed first, and with the wheels in the air before the floor. Button~3 of the IO board is
+the emergency stop (see below): it must work at any moment, in every state of your program. Keep the cart inside the
+test area, and catch it if it drives towards people or furniture.
+
+\paragraph{One program, started by \texttt{task} or by the buttons.}
+As in Assignment~2, all the tasks are in one program, with the same variable (\texttt{volatile uint16\_t task}) and the
+same rules. With the wheels on the ground, however, the USB cable cannot stay connected, so Live Expressions cannot be
+used: those tasks are started by the buttons of the IO board.
+
+\smallskip\noindent
+\begin{tabularx}{\textwidth}{@{}l L l@{}}
+\toprule
+Start & Runs & USB cable \\
+\midrule
+\texttt{task} = 0   & idle (the start-up value) & \\
+\texttt{task} = 120 & A.2: speed step, wheels in the air & connected \\
+\texttt{task} = 220 & B.2: measurements of the sensors (your own design, no mandatory lines) & connected \\
+button~0 & A.3: speed step on the floor & not connected \\
+button~1 & Part~B: the obstacle course, starting 5\,s after the press & not connected \\
+button~2 & sends the data recorded in the last run of A.3 or Part~B & connected \\
+button~3 & emergency stop & either \\
+\bottomrule
+\end{tabularx}
+
+\begin{itemize}
+  \item Buttons 0 to 2 are read only while the program is idle (\texttt{task} = 0, nothing running). Button~3 is read
+        on every pass of every loop, in every task and every state, so no pass may take longer than 20\,ms (no long
+        \texttt{HAL\_Delay}).
+  \item The emergency stop sets every PWM duty to 0, stops all the interrupts, and ends the program: nothing more runs
+        until the board is reset (the black RESET button of the Nucleo board), except button~2, so the data of the
+        stopped run can still be sent (a reset erases it).
+  \item Running without the cable: flash and start the program as usual, then unplug the USB cable. The program keeps
+        running, since the board takes its power from the cart's battery (the power jumper on E5V). Put the cart down
+        and press the button. After the run, connect the cable again, start the recording in MATLAB (as in
+        Assignment~2), and press button~2.
+  \item \textbf{Connecting the cable resets the board}, so your program starts again from the beginning, and the
+        start-up code clears all the usual variables. The RAM itself keeps its content through a reset, as long as the
+        board stays powered. So keep the recorded data (the arrays and the number of samples) in a section of RAM that the
+        start-up code does not clear. In \texttt{STM32G474RETX\_FLASH.ld}, add these lines right after the
+        \texttt{.bss} section (after its closing \texttt{\} >RAM}):
+\begin{lstlisting}
+  .noinit (NOLOAD) :
+  {
+    . = ALIGN(4);
+    *(.noinit)
+    *(.noinit*)
+    . = ALIGN(4);
+  } >RAM
+\end{lstlisting}
+        and declare the variables to keep like this:
+\begin{lstlisting}
+static int32_t rec[4][N] __attribute__((section(".noinit")));
+\end{lstlisting}
+        They are not cleared and not
+        initialised at start-up, so after switching the power on they hold random values: add a variable that says
+        whether the data is valid (for example, a fixed ``magic'' number written when a run ends).
+  \item Do not switch the cart off before you have sent the data. That erases the RAM.
+        \flag{Yohai: tested on 2026-11-07 with the cart on a socket supply (the re-plug resets the board, the
+        \texttt{.noinit} RAM survives). Check once that the same works with the cart on its battery.}
+  \item On the floor PuTTY cannot be seen, so we recommend showing the state of your program on the RGB LEDs of the
+        IO board (for example, one colour per state).
+\end{itemize}
+
+\paragraph{Printing the results: the line formats are MANDATORY.}
+The rules of Assignment~2 apply.
 
 \paragraph{Part A: PI speed controller.}
 \begin{enumerate}[label=A.\arabic*, leftmargin=2.2em]
-  \item Start from the first-order model you fitted in Assignment~2, Part~E ($K$, $\tau$). Choose a requirement for
-        the closed loop (for example a settling time and the largest overshoot you accept), design a PI controller for
-        the wheel speed that meets it, and give $K_p$ and $K_i$. Explain your choice.
-  \item Discretise the controller for the 100\,Hz interrupt of TIM6 and implement it in C, for all four wheels. Limit
-        the duty to its allowed range, and prevent integrator windup while the duty is saturated.
-  \item With the wheels in the air, step the speed setpoint of wheel~1 and record the response as in Assignment~2,
-        Part~E. In MATLAB, plot the measured and the simulated closed-loop responses on one figure, and explain the
-        differences.
-  \item Repeat A.3 with the cart on the floor, all four wheels at the same setpoint. What changes, and why?
+  \item For each of the four wheels, design a PI controller from the model you fitted in Assignment~2 (E.3). For
+        example, choose as the design goal no overshoot and a closed-loop time constant $\tau_c$ (the time the speed
+        takes to reach 63\,\% of a step), and design the PI so that its zero cancels the pole of your motor model: the
+        closed loop is then of first order, with time constant $\tau_c$. Note that the loop runs at 100\,Hz: a
+        $\tau_c$ shorter than a few sample periods (about 30\,ms) is not realistic. Give $K_p$ and $K_i$, and the
+        discrete implementation at 100\,Hz (TIM6). Explain how you deal with saturation (the duty cannot go beyond
+        100\,\%) and with integrator windup, and explain your choices.
+  \item With the wheels in the air, give all four wheels the same speed step, from rest to a setpoint of your choice,
+        and record the response at 100\,Hz for 2\,s, as in Assignment~2 E.2 (into arrays inside the TIM6 interrupt,
+        printed only after the recording; then the wheels stop). One line per sample:
+        \texttt{A2: t=0.01 r=10.00 w1=9.87 w2=9.91 w3=9.80 w4=9.95 u1=3.21 u2=3.18 u3=3.30 u4=3.25} (time in s,
+        setpoint and speeds in rad/s, control effort in V). In MATLAB, plot for each wheel the measured speed and the
+        control effort against time. We recommend that you also simulate the closed loop in Simulink and overlay its
+        response on the measured one. Explain the differences.
+  \item Repeat A.2 with the cart on the floor, all four wheels at the same setpoint (the cart drives forward: make sure
+        it has room). Send the data with button~2, in lines tagged \texttt{A3:} with the fields of A.2. What changes
+        compared with A.2, and why?
 \end{enumerate}
+
+\noindent\textbf{Video:} \texttt{V\_A}, showing A.3: the cart on the floor, from the press of button~0 until it stops.
 
 \paragraph{Part B: Obstacle course.}
-The cart drives forward along a straight line under the speed control of Part~A. When it detects an obstacle ahead, it
-gets as close to it as it can without touching it, and stops. It bypasses the first obstacle from the right, as close
-to the obstacle as it can, and comes back to the original line. It bypasses the next obstacle from the left, and the
-third from the right again, each time returning to the original line and driving on.
+The cart drives along a course with three obstacles on its line. It moves only in straight lines (forward, sideways
+and backward, without turning: the Mecanum wheels allow it; use the kinematics of tutorial~10), with the speed
+controller of Part~A on every wheel. Button~1 starts the run: the cart waits 5\,s, and then drives forward. When it
+detects an obstacle ahead, it stops as close to it as it can without touching it. It then goes around the obstacle, as
+close to it as it can, on the side that gives the shorter path, and comes back to its original line. At the third
+obstacle it stops, as close to it as it can, and the run ends.
+To choose the side and to go around the obstacle, use the ultrasonic sensor together with its servo: it can scan to
+the sides, within the servo's limits. There are many possible solutions; design your own and explain it.
+\flag{Yohai: check \texttt{STRAFE\_SIGN} in the A3 solution (\texttt{ass3.h}) on the floor: wheels 2 and 4 forward
+with 1 and 3 backward must move the cart to its left (+1, the usual X pattern of the rollers). It is not in
+\texttt{car\_params.c}, since it should be the same on every car.}
 \begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
-  \item Use \textbf{both} sensors, the IR sensor and the ultrasonic sensor. Explain your strategy in the report: which
-        sensor detects the obstacle, which one decides how close you get, what you do when they disagree, and how you
-        handle false or missing readings. Support it with measurements of each sensor's range and reliability.
-  \item Write the program as a state machine (\texttt{enum} + \texttt{switch}). Include the state diagram in the
-        report, with the condition for every transition.
-  \item Use the encoders to measure how far the cart has moved. In the report, give the closest distance to each
-        obstacle and the sideways distance from the original line after each bypass.
+  \item Write the program as a state machine (\texttt{enum} + \texttt{switch}). In the report, include the state
+        diagram, with the condition of every transition. Present your choices (for example, the distance at which the
+        cart stops), the considerations behind them, and the performance you actually achieved.
+  \item Sensor fusion. Use \textbf{both} sensors, the IR sensor and the ultrasonic sensor. In the report, explain your
+        strategy, including what the program does when the sensors disagree, and with false or missing readings.
+        Support it with measurements of each sensor's range and reliability (task 220).
+  \item Analysis after the run. During the run, record the encoder counts of the four wheels into RAM, at a fixed
+        rate. Compute how long a run your arrays can hold (the STM32G474RE has 128\,KB of RAM), and choose the sample
+        rate and the variable types accordingly. After the run, send the data with button~2, one line per sample:
+        \texttt{B3: t=0.01 c1=1234 c2=1230 c3=1236 c4=1229} (time in s, the counts of each wheel since the start of the
+        run, positive forward). You may add fields at the end of the line, such as the state. In MATLAB, compute the
+        cart's path from the encoder data (the kinematics, integrated over time), and plot it over a map of the
+        course, with the obstacles where you measured them. Measure also where the cart really stopped, and explain the
+        difference between the computed path and the real one.
+  \item Bonus: the data of B.3 can also be used during the run, to close a loop on the position of each wheel or on
+        the position of the whole cart, and so improve the performance. This is not easy, but you may try it.
 \end{enumerate}
-Show the whole course, all three obstacles, in the video.
 
-\paragraph{Part C (bonus): Back to the start.}
-After the third obstacle, the cart returns to its starting point. Learn by yourself how to pivot the cart (turn it in
-place), and then drive back in straight lines. Report how far from the starting point the cart stopped, and explain
-where the error comes from.
-\flag{Bucher and Yohai: the weight of the bonus, and whether the obstacles stay on the course for the way back.}
+\noindent\textbf{Videos:} \texttt{V\_B1} and \texttt{V\_B2}, one video file for each of the two published cases. Each
+shows the whole course in one shot, from the press of button~1 until the cart stops at the third obstacle, with all
+three obstacles in view (film from above if you can, so the path can be compared with B.3). At the end of one of them,
+show one emergency stop: press button~3 during a run.
+
 
 \subsection{Quizzes}
 Two quizzes, each 10\% of the final grade, held in the first hour of the lecture: Quiz 1 in session 4 (24.11.2026), Quiz 2 in session 9 (29.12.2026).
