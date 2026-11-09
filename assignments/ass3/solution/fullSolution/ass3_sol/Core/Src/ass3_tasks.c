@@ -146,7 +146,7 @@ void ass3Init(void)
     car = carParamsGet(carId);
     if (car == NULL)
     {
-        printf("\r\ncar %u is not in car_params.c: nothing runs\r\n", carId);
+        printf("\r\ncar %u is not in car_params.c, or not fully measured: nothing runs\r\n", carId);
         while (1) { }                        /* motors were never started */
     }
     ioBoardInit();

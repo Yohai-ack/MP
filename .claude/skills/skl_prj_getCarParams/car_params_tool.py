@@ -16,8 +16,12 @@ that moves a wheel is run only after Yohai said "ready" (the skill asks). The wh
   calstart                      flash the A3 solution (ass3_sol) and start task 900: nothing moves but the servo
   servo US                      (task 900) turn the servo to US microseconds (900..2100)
   ir                            (task 900) print the IR pin level, read 6 times over 3 s
-  sensors X IR D900,D1500,D2100 write car X's irObstacleLevel (1 high, 0 low) and servoDeg (degrees, + left) into
-                                car_params.c
+  setir X LEVEL                 write car X's irObstacleLevel (1 high, 0 low) into car_params.c
+  setzero X US                  write car X's servoZeroUs (the pulse that looks straight ahead) into car_params.c
+  setmap X RR,RL,FL,FR          write car X's wheelMotor: the motor (1..4) at the rear right, rear left, front left
+                                and front right (found in step 1: which wheel each motor turned)
+                                (setir, setzero and setmap add a partial entry if car X has none yet; carParamsGet refuses
+                                it until `write` adds the wheels)
 """
 import glob, os, re, shutil, subprocess, sys, time
 from pathlib import Path
@@ -34,10 +38,20 @@ SOL3 = REPO / "assignments/ass3/solution/fullSolution"
 DATA = SOL3 / "car_data"
 PARAMS_C = SOL3 / "ass3_sol/Core/Src/car_params.c"
 ELF3 = SOL3 / "ass3_sol/Debug/ass3_sol.elf"
-SENSOR_RE = r"        \.(?:irObstacleLevel|servoUs|servoDeg) .*\n"
-SENSOR_DEFAULT = ("        .irObstacleLevel = 1,                          /* NOT YET MEASURED */\n"
-                  "        .servoUs         = { 900, 1500, 2100 },\n"
-                  "        .servoDeg        = { -60.0f, 0.0f, 60.0f },    /* NOT YET MEASURED */\n")
+SENSOR_FIELDS = ("irObstacleLevel", "wheelMotor", "servoZeroUs")
+SENSOR_DEFAULT = {"wheelMotor":      "        .wheelMotor      = { 1, 2, 3, 4 },             /* NOT YET MEASURED */\n",
+"irObstacleLevel": "        .irObstacleLevel = 1,                          /* NOT YET MEASURED */\n",
+                  "servoZeroUs":     "        .servoZeroUs     = 1500,                       /* NOT YET MEASURED */\n"}
+
+
+def sensor_line(entry, field):
+    """the line of `field` in an entry (with any continuation comment lines), or None"""
+    m = re.search(r"        \.%s .*\n(?:\s{20,}[^.\s].*\n)*" % field, entry or "")
+    return m.group(0) if m else None
+
+
+def entry_re(car):
+    return re.compile(r"    /\* car %d, measured.*?\n    \},\n" % car, re.S)
 BUILD = Path(os.environ.get("TEMP", "/tmp")) / "carparams_build"
 
 ENC = [("TIM1", 0x40012C00), ("TIM8", 0x40013400), ("TIM3", 0x40000400), ("TIM4", 0x40000800)]
@@ -198,10 +212,10 @@ def cmd_write(car, md, ed, cpr, tauc):
            f(md, "%+d"), f(ed, "%+d"), f(cpr, "%.1ff"), f(K, "%.3ff"), f(tau, "%.4ff"),
            f(Kp, "%.3ff"), f(Ki, "%.2ff"), f([int(x * 100) / 100 for x in mv], "%.2ff"), tauc, "%s"))
     s = PARAMS_C.read_text()
-    old = re.compile(r"    /\* car %d, measured.*?\n    \},\n" % car, re.S)
+    old = entry_re(car)
     m = old.search(s)
-    keep = re.findall(SENSOR_RE, m.group(0)) if m else []           # the sensor lines of an old entry stay
-    entry = entry % ("".join(keep) if len(keep) == 3 else SENSOR_DEFAULT)
+    old_entry = m.group(0) if m else None                            # the sensor lines of an old entry stay
+    entry = entry % "".join(sensor_line(old_entry, f) or SENSOR_DEFAULT[f] for f in SENSOR_FIELDS)
     if m:
         s = old.sub(lambda _: entry, s, count=1)
         print("car %d: entry replaced in %s" % (car, PARAMS_C.name))
@@ -234,19 +248,26 @@ def cmd_ir(b):
     print("IR pin:", [int(x.group(1)) for x in lv if x] or "no CAL lines: is task 900 running?")
 
 
-def cmd_sensors(car, ir, deg):
+def cmd_setfield(car, field, value):
+    """write one sensor field of car X; a car with no entry gets a partial one (carParamsGet refuses it: Kp = 0)"""
     s = PARAMS_C.read_text()
-    m = re.search(r"    /\* car %d, measured.*?\n    \},\n" % car, s, re.S)
-    if not m:
-        sys.exit("car %d has no entry in car_params.c: measure steps 1 to 4 first" % car)
-    e = re.sub(SENSOR_RE, "", m.group(0))
-    lines = ("        .irObstacleLevel = %d,                          /* measured %s */\n"
-             "        .servoUs         = { 900, 1500, 2100 },\n"
-             "        .servoDeg        = { %s },\n"
-             % (ir, time.strftime("%Y-%m-%d"), ", ".join("%.1ff" % d for d in deg)))
-    e = e[:e.rindex("    },\n")] + lines + "    },\n"
-    PARAMS_C.write_text(s[:m.start()] + e + s[m.end():])
-    print("car %d: irObstacleLevel %d, servoDeg %s written" % (car, ir, deg))
+    line = "        .%-15s = %s,%s/* measured %s */\n" % (field, value, " " * (27 - len(str(value))),
+                                                       time.strftime("%Y-%m-%d"))
+    m = entry_re(car).search(s)
+    if m:
+        e = m.group(0)
+        old = sensor_line(e, field)
+        e = e.replace(old, line) if old else e[:e.rindex("    },\n")] + line + "    },\n"
+        s = s[:m.start()] + e + s[m.end():]
+    else:
+        e = ("    /* car %d, measured %s (skl_prj_getCarParams): NOT COMPLETE, only the sensors so far.\n"
+             "       The wheels are still to be measured (carParamsGet refuses it until then). */\n"
+             "    {\n        .carId           = %d,\n%s    },\n"
+             % (car, time.strftime("%Y-%m-%d"), car,
+                "".join(line if f == field else SENSOR_DEFAULT[f] for f in SENSOR_FIELDS)))
+        s = s.replace("\n};\n\nconst CarParams", "\n\n" + e + "};\n\nconst CarParams", 1)
+    PARAMS_C.write_text(s)
+    print("car %d: %s = %s written" % (car, field, value))
 
 
 def main():
@@ -256,10 +277,18 @@ def main():
         cmd_write(int(sys.argv[2]), signs(sys.argv[3]), signs(sys.argv[4]), cpr,
                   float(sys.argv[6]) if len(sys.argv) > 6 else 0.032)
         return
-    if cmd == "sensors":
-        deg = [float(x) for x in sys.argv[4].split(",")]
-        assert int(sys.argv[3]) in (0, 1) and len(deg) == 3, "IR 0 or 1, three angles"
-        cmd_sensors(int(sys.argv[2]), int(sys.argv[3]), deg)
+    if cmd == "setir":
+        assert int(sys.argv[3]) in (0, 1), "LEVEL 0 or 1"
+        cmd_setfield(int(sys.argv[2]), "irObstacleLevel", int(sys.argv[3]))
+        return
+    if cmd == "setmap":
+        mp = [int(x) for x in sys.argv[3].split(",")]
+        assert sorted(mp) == [1, 2, 3, 4], "the motors at RR,RL,FL,FR: 1..4, each once"
+        cmd_setfield(int(sys.argv[2]), "wheelMotor", "{ %s }" % ", ".join(map(str, mp)))
+        return
+    if cmd == "setzero":
+        assert 900 <= int(sys.argv[3]) <= 2100, "900..2100 us"
+        cmd_setfield(int(sys.argv[2]), "servoZeroUs", int(sys.argv[3]))
         return
     b = a.Board(a.com_port())
     try:

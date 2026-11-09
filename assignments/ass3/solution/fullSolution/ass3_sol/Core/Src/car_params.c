@@ -5,6 +5,8 @@
  *          measured. Add a car by adding one entry to carParams[].
  *
  *          How each car was measured (wheels in the air, 12 V supply):
+ *          wheelMotor: each motor run alone (the same run as motorDir);
+ *            Yohai says which wheel turned.
  *          motorDir, encDir: each motor run with its DIR pin = 1 at 30 % for
  *            1 s; the wheel's direction seen, the counter change read.
  *          countsPerRev: each wheel turned 3 turns by hand.
@@ -22,8 +24,14 @@
  *            step may be at most 0.9 x 12 V / that.
  *          irObstacleLevel: the IR pin read with and without an object in
  *            front of the sensor (task 900).
- *          servoDeg: the servo set to 900, 1500 and 2100 us (task 900) and the
- *            sonar's direction at each read off by eye, + to the left.
+ *          servoZeroUs: the servo moved by hand commands (task 900) from
+ *            1500 us, in steps of 50 us and then smaller, until the sonar
+ *            looks straight ahead. The scale (degrees per us) is the same on
+ *            every car: SERVO_DEG_PER_US in ass3.h.
+ *
+ *          An entry whose wheels are not measured yet (Kp = 0), or whose
+ *          wheelMotor is not 1, 2, 3, 4 in some order, is refused by
+ *          carParamsGet, so that car cannot drive with made-up values.
  ******************************************************************************
  */
 #include <stddef.h>
@@ -48,8 +56,31 @@ static const CarParams carParams[] =
         .designOvershoot = 1.0f,
         .designTauC      = 0.032f,
         .irObstacleLevel = 1,                          /* measured 2026-11-07 */
-        .servoUs         = { 900, 1500, 2100 },
-        .servoDeg        = { 62.0f, 5.0f, -62.0f },
+        .wheelMotor      = { 1, 2, 3, 4 },             /* measured 2026-11-07 */
+        .servoZeroUs     = 1545,                       /* REDO: from the old 3-point calibration
+                                                          (900/1500/2100 us = 62 L / 5 L / 62 R deg) */
+    },
+
+    /* car 11, measured 2026-11-09 (skl_prj_getCarParams). countsPerRev: 1320, 1320, 1320, 1320.
+       (by hand, motors 1..4: 1313.7, 1316.0, 1317.3, 1321.0: hand error; the encoder gives 1320)
+       Wiring unlike car 12: motor 3 is the front RIGHT wheel, motor 4 the front LEFT.
+       Fit rms 0.39 to 0.67 rad/s (one count in 10 ms is 0.48 rad/s).
+       Simulated with these gains: overshoot 1.000 / 1.000 / 1.000 / 1.000. */
+    {
+        .carId           = 11,
+        .motorDir        = { +1, -1, -1, -1 },
+        .encDir          = { -1, +1, -1, +1 },
+        .countsPerRev    = { 1320.0f, 1320.0f, 1320.0f, 1320.0f },
+        .K               = { 3.478f, 3.406f, 3.225f, 3.216f },
+        .tau             = { 0.0890f, 0.1015f, 0.0790f, 0.1030f },
+        .Kp              = { 0.800f, 0.931f, 0.766f, 1.001f },
+        .Ki              = { 8.98f, 9.17f, 9.69f, 9.72f },
+        .maxVelCmdNoSat  = { 12.14f, 10.55f, 12.52f, 9.83f },
+        .designOvershoot = 1.0f,
+        .designTauC      = 0.032f,
+        .irObstacleLevel = 1,                          /* measured 2026-11-09 */
+        .wheelMotor      = { 1, 2, 4, 3 },             /* measured 2026-11-09 */
+        .servoZeroUs     = 1575,                       /* measured 2026-11-09 */
     },
 };
 
@@ -57,9 +88,18 @@ const CarParams *carParamsGet(uint8_t carId)
 {
     for (size_t i = 0; i < sizeof carParams / sizeof carParams[0]; i++)
     {
-        if (carParams[i].carId == carId)
+        const CarParams *c = &carParams[i];
+        if ((c->carId == carId) && (c->Kp[0] > 0.0f))          /* measured in full */
         {
-            return &carParams[i];
+            uint8_t seen = 0;
+            for (uint8_t p = 0; p < 4u; p++)
+            {
+                if ((c->wheelMotor[p] >= 1u) && (c->wheelMotor[p] <= 4u))
+                {
+                    seen |= (uint8_t)(1u << (c->wheelMotor[p] - 1u));
+                }
+            }
+            return (seen == 0x0Fu) ? c : NULL;                  /* each motor once */
         }
     }
     return NULL;

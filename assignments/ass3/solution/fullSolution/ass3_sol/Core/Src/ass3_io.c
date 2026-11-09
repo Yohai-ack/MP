@@ -23,8 +23,6 @@
 #define PCA9685_LED0_ON  0x06u
 #define PCA9685_PRESCALE 0xFEu
 #define I2C_TIMEOUT_MS   10u
-#define SERVO_MIN_US     900u       /* the course's servo range */
-#define SERVO_MAX_US     2100u
 
 uint8_t irObstacle(void)
 {
@@ -144,31 +142,16 @@ void servoSetUs(uint16_t us)
     servoWrite((uint8_t)(PCA9685_LED0_ON + 4u * SERVO_CHANNEL), data, 4);
 }
 
-/* the direction the sonar looks at, in degrees from straight ahead, + left:
-   straight lines between the three calibration points of the car         */
+/* the direction the sonar looks at, in degrees from straight ahead, + left */
 float servoAngleDeg(uint16_t us)
 {
-    const uint16_t *p = car->servoUs;
-    const float    *d = car->servoDeg;
-    uint8_t k = ((float)us <= (float)p[1]) ? 0u : 1u;          /* the segment */
-
-    return d[k] + (d[k + 1u] - d[k]) * ((float)us - (float)p[k]) / (float)(p[k + 1u] - p[k]);
+    return ((float)us - (float)car->servoZeroUs) * SERVO_DEG_PER_US;
 }
 
 /* the pulse at which the sonar looks straight ahead (0 degrees) */
 uint16_t servoAheadUs(void)
 {
-    const uint16_t *p = car->servoUs;
-    const float    *d = car->servoDeg;
-
-    for (uint8_t k = 0; k < 2u; k++)
-    {
-        if ((d[k] * d[k + 1u] <= 0.0f) && (d[k] != d[k + 1u]))   /* 0 lies in this segment */
-        {
-            return (uint16_t)((float)p[k] + (float)(p[k + 1u] - p[k]) * (0.0f - d[k]) / (d[k + 1u] - d[k]) + 0.5f);
-        }
-    }
-    return p[1];
+    return car->servoZeroUs;
 }
 
 /* ------------------------------------------------------------------ */

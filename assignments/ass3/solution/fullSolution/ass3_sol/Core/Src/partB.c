@@ -55,16 +55,24 @@ volatile uint8_t courseState = 0;
 
 static uint32_t scanMm[SCAN_N];
 
-/* the scan's directions: SCAN_N pulses evenly from car->servoUs[0] to [2] */
+/* the scan's directions: SCAN_N pulses evenly over zero +- half, the largest
+   range symmetric about straight ahead that stays within 900 .. 2100 us     */
 static uint16_t scanUs(uint8_t i)
 {
-    return (uint16_t)(car->servoUs[0] + (uint32_t)(car->servoUs[2] - car->servoUs[0]) * i / (SCAN_N - 1u));
+    int32_t z = (int32_t)car->servoZeroUs;
+    int32_t half = z - (int32_t)SERVO_MIN_US;
+
+    if ((int32_t)SERVO_MAX_US - z < half)
+    {
+        half = (int32_t)SERVO_MAX_US - z;
+    }
+    return (uint16_t)(z - half + 2 * half * (int32_t)i / (int32_t)(SCAN_N - 1u));
 }
 
-/* +1 if a longer pulse turns the sonar to the left (from the calibration) */
+/* +1 if a longer pulse turns the sonar to the left */
 static int8_t usLeft(void)
 {
-    return (car->servoDeg[2] > car->servoDeg[0]) ? 1 : -1;
+    return (SERVO_DEG_PER_US > 0.0f) ? 1 : -1;
 }
 
 /* the scan direction closest to straight ahead */

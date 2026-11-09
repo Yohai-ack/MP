@@ -2,11 +2,12 @@
  ******************************************************************************
  * @file    car_params.h
  * @brief   Assignment 3 solution (TA): the parameters that differ from car to
- *          car. Every array has one element per wheel: [0] is wheel 1.
+ *          car. Every array of four has one element per MOTOR: [0] is motor 1.
  *
- *          Wheels: 1 rear right (TIM1), 2 rear left (TIM8),
- *                  3 front left (TIM3), 4 front right (TIM4).
- *          Encoders in Encoder Mode TI1 and TI2.
+ *          Motors (the A2 table): 1 = TIM2_CH1, DIR1, encoder TIM1;
+ *          2 = CH2, DIR2, TIM8; 3 = CH3, DIR3, TIM3; 4 = CH4, DIR4, TIM4.
+ *          Which wheel each motor drives depends on the car's wiring:
+ *          wheelMotor. Encoders in Encoder Mode TI1 and TI2.
  ******************************************************************************
  */
 #ifndef CAR_PARAMS_H
@@ -18,7 +19,11 @@ typedef struct
 {
     uint8_t carId;              /* the number written on the car             */
 
-    /* physics */
+    /* wiring: the motor (1..4) that drives each wheel,
+       [0] rear right, [1] rear left, [2] front left, [3] front right    */
+    uint8_t wheelMotor[4];
+
+    /* physics, per motor */
     int8_t  motorDir[4];        /* +1: DIR pin = 1 drives the wheel forward,
                                    -1: DIR pin = 1 drives it backward         */
     int8_t  encDir[4];          /* +1: the counter counts up when the wheel
@@ -43,10 +48,10 @@ typedef struct
     /* sensors */
     uint8_t  irObstacleLevel;   /* the IR pin (PA7) level that means an
                                    obstacle: 1 high, 0 low                    */
-    uint16_t servoUs[3];        /* the calibration pulses, us: 900, 1500, 2100
-                                   (the course's servo range)                 */
-    float    servoDeg[3];       /* where the sonar looks at each, degrees from
-                                   straight ahead, + to the left              */
+    uint16_t servoZeroUs;       /* the servo pulse, us, at which the sonar
+                                   looks straight ahead (0 degrees); the
+                                   scale, degrees per us, is the same on every
+                                   car: SERVO_DEG_PER_US in ass3.h            */
 } CarParams;
 
 /* the parameters of car `carId`, or NULL if it is not in car_params.c */

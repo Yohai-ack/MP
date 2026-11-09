@@ -43,17 +43,18 @@
 Load *.ioc, build, flash and run; the debugger: breakpoints, stepping, live expressions.
   & \\
 \addlinespace
-2 & 10.11.2026 & \multirow[t]{2}{=}{\textcolor{red}{\bfseries Must be taught for A1 and Quiz 1: bit idioms on registers (set,
-    clear, toggle, test, masks, \texttt{GPIOx->ODR}); active-low inputs; level vs.\ edge triggering; contact bounce
-    and debouncing; loop pass time and missed events; blocking \texttt{HAL\_Delay} vs.\ non-blocking
-    \texttt{HAL\_GetTick} timing; \texttt{volatile}; logic conditions, truth tables, state diagrams.}}
+2 & 10.11.2026 & Inside the STM32: fetch cycle, memory map, GPIO registers. UART and \texttt{printf}: 86.8\,$\mu$s
+    per character at 115\,200 baud. RGB LEDs and the IO-board functions. Variables in C: \texttt{stdint} types,
+    overflow, casts, \texttt{float}, \texttt{const}, \texttt{volatile}. Level and edge triggers, active-low;
+    debouncing; a slow loop misses events (demo \texttt{PA7\_Debounce\_Demo}).
   & variables overflow; blink LD2; printf to PuTTY ;; the four bit idioms: set, clear, toggle, test.
   & A1 out: variables and wrap, bit operations, trigerring, timing, IR sensor logics \\
 \addlinespace
-3 & 17.11.2026 &
+3 & 17.11.2026 & \textcolor{red}{\bfseries Still needed for A1 and Quiz 1: bit idioms on registers (set, clear,
+    toggle, test, masks); blocking \texttt{HAL\_Delay} vs.\ \texttt{HAL\_GetTick}; truth tables, state diagrams.}
   & \texttt{HAL\_Delay} and \texttt{HAL\_GetTick}; operate the RGB LEDs (I2C “black box”); using includes for external
     files
-  & \textbf{Last material included in A1}\rule[-1.5cm]{0pt}{0pt} \\   % the strut makes room for the merged cell of rows 2 and 3
+  & \textbf{Last material included in A1} \\
 \addlinespace
 4 & 24.11.2026 & no lecture yet
   & PWM, three methods: polling (\texttt{HAL\_GetTick} in the main loop), interrupt (TIM7 callback) and hardware
@@ -1213,10 +1214,10 @@ encoder is read by its own timer in encoder mode.\leavevmode\\[2pt]
 \toprule
 Motor & PWM pin & DIR pin & Encoder timer & Encoder pins (A, B) \\
 \midrule
-1 (rear right) & PA0 = TIM2\_CH1 & PC2 (DIR1) & TIM1 & PC0 = TIM1\_CH1, PC1 = TIM1\_CH2 \\
-2 (rear left) & PA1 = TIM2\_CH2 & PB4 (DIR2) & TIM8 & PC6 = TIM8\_CH1, PC7 = TIM8\_CH2 \\
-3 (front left) & PB10 = TIM2\_CH3 & PB11 (DIR3) & TIM3 & PA6 = TIM3\_CH1, PA4 = TIM3\_CH2 \\
-4 (front right) & PA10 = TIM2\_CH4 & PB13 (DIR4) & TIM4 & PA11 = TIM4\_CH1, PA12 = TIM4\_CH2 \\
+1 & PA0 = TIM2\_CH1 & PC2 (DIR1) & TIM1 & PC0 = TIM1\_CH1, PC1 = TIM1\_CH2 \\
+2 & PA1 = TIM2\_CH2 & PB4 (DIR2) & TIM8 & PC6 = TIM8\_CH1, PC7 = TIM8\_CH2 \\
+3 & PB10 = TIM2\_CH3 & PB11 (DIR3) & TIM3 & PA6 = TIM3\_CH1, PA4 = TIM3\_CH2 \\
+4 & PA10 = TIM2\_CH4 & PB13 (DIR4) & TIM4 & PA11 = TIM4\_CH1, PA12 = TIM4\_CH2 \\
 \bottomrule
 \end{tabularx}
 
@@ -1403,9 +1404,15 @@ close to it as it can, on the side that gives the shorter path, and comes back t
 obstacle it stops, as close to it as it can, and the run ends.
 To choose the side and to go around the obstacle, use the ultrasonic sensor together with its servo: it can scan to
 the sides, within the servo's limits. There are many possible solutions; design your own and explain it.
-\flag{Yohai: check \texttt{STRAFE\_SIGN} in the A3 solution (\texttt{ass3.h}) on the floor: wheels 2 and 4 forward
-with 1 and 3 backward must move the cart to its left (+1, the usual X pattern of the rollers). It is not in
+\flag{Yohai: check \texttt{STRAFE\_SIGN} in the A3 solution (\texttt{ass3.h}) on the floor: the rear-left and front-right
+wheels forward with the rear-right and front-left ones backward must move the cart to its left (+1, the usual X pattern of the rollers). It is not in
 \texttt{car\_params.c}, since it should be the same on every car.}
+\flag{Yohai: which motor drives which wheel differs from car to car (car 11 is wired unlike car 12), so the A2
+table gives no wheel positions; the A3 solution has a per-car map (\texttt{wheelMotor} in \texttt{car\_params.c}).
+Decide whether the students must find their own mapping (for example in A2, ``Check your cart'').}
+\flag{Yohai: car 12 needs the new servo-zero calibration (\texttt{/skl\_prj\_getCarParams}, step 5: step the servo
+until the sonar looks straight ahead). Its \texttt{servoZeroUs} = 1545\,$\mu$s is only derived from the old
+three-point calibration.}
 \begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
   \item Write the program as a state machine (\texttt{enum} + \texttt{switch}). In the report, include the state
         diagram, with the condition of every transition. Present your choices (for example, the distance at which the

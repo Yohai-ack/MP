@@ -6,7 +6,8 @@
  *          turning, and the odometry. Every car-specific number comes from
  *          `car` (car_params.c).
  *
- *          Wheels: 1 rear right, 2 rear left, 3 front left, 4 front right.
+ *          Arrays are per MOTOR (index 0 = motor 1). Only the kinematics
+ *          use the wheel positions, through car->wheelMotor.
  *          Speeds in rad/s, positive when the wheel turns forward.
  ******************************************************************************
  */
@@ -170,8 +171,9 @@ float wheelsVCmd(void)
 /* ------------------------------------------------------------------ */
 /* Mecanum motions without turning. Wheel speeds for a cart speed vx   */
 /* (forward) and vy (left), no rotation:                               */
-/*   rear right (1) and front left (3): (vx - vy) / r                  */
-/*   rear left  (2) and front right (4): (vx + vy) / r                 */
+/*   rear right and front left: (vx - vy) / r                          */
+/*   rear left and front right: (vx + vy) / r                          */
+/* (positions: car->wheelMotor gives the motor at each)                */
 /* Each motion puts every wheel at +-vCmd, so a motion that starts     */
 /* from rest never saturates. Change motion only through a stop.       */
 /* ------------------------------------------------------------------ */
@@ -182,30 +184,41 @@ void driveForward(int8_t dir)
     wheelsSetRef(r);
 }
 
+/* to the left: rear right and front left backward, the other two forward */
+static const int8_t STRAFE_LEFT[4] = {-1, +1, -1, +1};   /* RR, RL, FL, FR */
+
 void driveSideways(int8_t dir)
 {
     float v = (float)(dir * STRAFE_SIGN) * wheelsVCmd();
-    float r[4] = {-v, v, -v, v};
+    float r[4];
+    for (uint8_t p = 0; p < 4u; p++)
+    {
+        r[car->wheelMotor[p] - 1u] = (float)STRAFE_LEFT[p] * v;
+    }
     wheelsSetRef(r);
 }
 
-/* odometry from the same kinematics: x = r (q1 + q2 + q3 + q4) / 4,
-   y = r (-q1 + q2 - q3 + q4) / 4, q = wheel angle since odoReset      */
-static float wheelAngle(uint8_t w)
+/* odometry from the same kinematics: x = r (sum of the four q) / 4,
+   y = r (sum of STRAFE_LEFT x q) / 4, q = wheel angle since odoReset   */
+static float motorAngle(uint8_t m)
 {
-    return (float)pos[w] * radPerCount[w];
+    return (float)pos[m] * radPerCount[m];
 }
 
 float odoForwardMm(void)
 {
     return 1000.0f * WHEEL_RADIUS_M *
-           (wheelAngle(0) + wheelAngle(1) + wheelAngle(2) + wheelAngle(3)) / 4.0f;
+           (motorAngle(0) + motorAngle(1) + motorAngle(2) + motorAngle(3)) / 4.0f;
 }
 
 float odoLeftMm(void)
 {
-    return (float)STRAFE_SIGN * 1000.0f * WHEEL_RADIUS_M *
-           (-wheelAngle(0) + wheelAngle(1) - wheelAngle(2) + wheelAngle(3)) / 4.0f;
+    float sum = 0.0f;
+    for (uint8_t p = 0; p < 4u; p++)
+    {
+        sum += (float)STRAFE_LEFT[p] * motorAngle((uint8_t)(car->wheelMotor[p] - 1u));
+    }
+    return (float)STRAFE_SIGN * 1000.0f * WHEEL_RADIUS_M * sum / 4.0f;
 }
 
 void odoReset(void)

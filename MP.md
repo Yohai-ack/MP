@@ -234,10 +234,13 @@ topics only, briefly; otherwise write "no lecture yet". Re-check the folder at e
 column. The planned lecture topics (Bucher's syllabus, my drafts) were replaced on 2026-11-03; they are in git history
 (commit d85ddaf and earlier). State 2026-11-03 (evening): `lecture 1\` has 3 PDFs (intro + numbers/overflow/bitwise,
 first project LED/printf, stack/buses/decoding/flip-flops/counters) and the example project zip; row 1 is filled.
-**Rows 2 and 3 are one merged cell (`\multirow`, Yohai's request):** "Must be taught for A1 and Quiz 1: ..." with the
-A1 topics lecture 1 did not cover (bit idioms on registers, active-low, level vs edge, bounce/debounce, missed events,
-HAL_Delay vs HAL_GetTick, volatile, truth tables/state diagrams). When lectures 2 and 3 arrive, compare them with that
-list and tell Yohai what is still missing before Quiz 1. The folder is Yohai's own (not Bucher's), but treat it as
+**Lecture 2 (2026-11-09, 8 PDFs L2_1..L2_8 + `PA7_Debounce_Demo.zip`):** STM32 inside, UART/printf, RGB LEDs, IO
+board and demo program, variables in C, four triggers, debouncing, live PA7 demo. Row 2 filled; the merged red cell of
+rows 2 and 3 was split: row 3 now holds only what is still needed for A1 and Quiz 1 (bit idioms on registers;
+HAL_Delay vs HAL_GetTick; truth tables, state diagrams). Lecture 2 announced for lesson 3: bits, where variables live,
+enum and struct, EXTI, counters, HAL_Delay. When lecture 3 arrives, check it against row 3's list. **UART timing for
+A1 D.1 is taught** (lecture 1 and L2_2: 10 bits per character, 86.8 us at 115200 baud, "a 40-character line costs
+3.5 ms"), so no extra tutorial slide is needed. The folder is Yohai's own (not Bucher's), but treat it as
 read-only: only read it.
 
 **Quiz 1 (written 2026-11-03):** `\subsection{Quiz 1}` right after A1 in the plan: 7 multiple-choice questions (4
@@ -373,7 +376,8 @@ students to add the `.noinit` section to `STM32G474RETX_FLASH.ld` and keep the r
 "valid" word there; button 2 sends them after the restart. Red flag left: check the same with the cart on its battery.
 **Wheel positions (2026-11-07, Yohai at the cart, ass2_sol task 510, encoder counters read over SWD):** motor 1 = rear
 right (TIM1), 2 = rear left (TIM8), 3 = front left (TIM3), 4 = front right (TIM4); each motor moved only its own timer, as
-in the A2 table, now with the positions in brackets. 1 s at 30 % gave 1,664 / 742 / 1,548 / 727 counts: motors 2 and 4
+in the A2 table (that is car 12's wiring: see "motor-to-wheel map" below; the positions were later removed from the
+A2 table). 1 s at 30 % gave 1,664 / 742 / 1,548 / 727 counts: motors 2 and 4
 about half: **slower motors, not resolution** (by hand all four give 1,320 per turn, measured the same day).
 **Car-specific parameters (Yohai, 2026-11-07):** the A3 solution keeps them per car in
 `assignments/ass3/solution/fullSolution/ass3_sol/Core/Src/car_params.c` (+ `Core/Inc/car_params.h`): `carParamsGet(id)`
@@ -409,11 +413,28 @@ The side is never fixed in advance: the course takes the side that needs the sho
 only the Mecanum kinematics (+1: wheels 2 and 4 forward, 1 and 3 back moves the cart left; usual X rollers), to
 confirm once on the floor (red flag in the A3 section of the plan). Overall size: 240 mm wide (outside of the
 wheels), 300 mm long (sensors to the rear): CAR_HALF_WIDTH_MM 120, CAR_LENGTH_MM 300.
-**Servo and IR are car parameters** (car_params.c: irObstacleLevel, servoUs {900, 1500, 2100} = the course's range,
-servoDeg); measured by step 5 of the skill with TA task 900 of ass3_sol (the servo follows `calServoUs`, the IR pin
-printed). Car 12 (2026-11-07): IR pin 1 = obstacle; servo 900 us 62 deg left, 1500 us 5 deg left, 2100 us 62 deg
-right (so straight ahead is about 1545 us, and a longer pulse turns right). The course interpolates between the three
-points. The `.ioc` key `TIMx.EncoderMode=TIM_ENCODERMODE_TI12` was written by
+**IR level and servo zero are car parameters** (car_params.c: irObstacleLevel, servoZeroUs), measured by step 5 of
+the skill with TA task 900 of ass3_sol (the servo follows `calServoUs`, the IR pin printed). **Servo (Yohai,
+2026-11-09): only the zero is car-specific** (the pulse at which the sonar looks straight ahead, found by stepping
+the servo 50 us, then 10 us, while Yohai watches; 1500 us is only the servo's own mid-travel, the holder's mounting
+shifts it). The scale is shared, `SERVO_DEG_PER_US` = -124/1200 deg/us in ass3.h (+ left: a longer pulse turns
+right), from car 12's 2026-11-07 readings (900 us 62 deg left, 1500 us 5 deg left, 2100 us 62 deg right). The scan
+is symmetric about the zero within 900 to 2100 us. Car 12: IR 1 = obstacle; servoZeroUs 1545 derived from the old
+three-point readings, **to redo with the zero step** (red flag in A3). `carParamsGet` refuses an entry with Kp = 0 (partial) or a
+wheelMotor that is not 1..4 each once (the A3 solution halts before driving it).
+**Motor-to-wheel map is car-specific (Yohai, 2026-11-09):** car 11 is wired with motor 3 = front RIGHT and motor 4 =
+front LEFT (car 12: 3 front left, 4 front right). car_params.c now has `wheelMotor[4]` (the motor at rear right, rear
+left, front left, front right; car 12 {1,2,3,4}, car 11 {1,2,4,3}); all other arrays are per MOTOR, and only the
+Mecanum sideways pattern and the y odometry use positions. The A2 table no longer gives positions; red flag in A3:
+decide whether students must find their own map. The skill's step 1 asks which wheel each motor turned (`setmap`),
+and step 2 goes by position: rear right, front right, then the left side (Yohai's order).
+**Car 11, measured in full 2026-11-09:** motors 1..4 at RR, RL, FR, FL; motorDir {+1,-1,-1,-1}, encDir {-1,+1,-1,+1}
+(the two right motors have opposite motor signs but equal encoder signs: probably one motor's leads swapped; the step
+speeds were all positive, so the signs are right); countsPerRev 1320 (by hand 1313.7 / 1316.0 / 1317.3 / 1321.0);
+K 3.48 / 3.41 / 3.23 / 3.22 rad/s/V, tau 0.089 / 0.102 / 0.079 / 0.103 s (fit rms 0.39 to 0.67): four well matched
+motors, much stronger than car 12's; Kp 0.80 / 0.93 / 0.77 / 1.00, Ki 9.0 / 9.2 / 9.7 / 9.7; maxVelCmdNoSat 12.14 /
+10.55 / 12.52 / 9.83 (motor 4 limits: the A3 speed is 0.9 x 9.83 = 8.85 rad/s); IR 1 = obstacle; servoZeroUs 1575
+(sonar holder assembled that day). The `.ioc` key `TIMx.EncoderMode=TIM_ENCODERMODE_TI12` was written by
 hand (main.c has TI12 too); not yet opened in CubeMX. Builds with 0 warnings (-Wall -Wextra).
 **A2 reference solution (2026-10-29):** `assignments/ass2/solution/fullSolution/ass2_sol/`
 (CubeIDE project; `ass2_sol.ioc` = the TA's ass2.ioc, built from ass1.ioc + the configuration section and checked in
