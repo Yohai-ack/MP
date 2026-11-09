@@ -76,12 +76,11 @@ extern I2C_HandleTypeDef hi2c1;
    (seen from above); check it once on the floor.                              */
 #define STRAFE_SIGN       (+1)
 
-/* The servo that turns the sonar. Only its zero (the pulse that looks straight
-   ahead) is car-specific (car->servoZeroUs); the scale is the same on every
-   car, measured on car 12 (2026-11-07): 900 us was 62 deg to the left and
-   2100 us 62 deg to the right, so 124 deg over 1200 us, and a LONGER pulse
-   turns the sonar to the RIGHT.                                              */
-#define SERVO_DEG_PER_US  (-124.0f / 1200.0f)   /* + left                     */
+/* The servo that turns the sonar. Its zero (the pulse that looks straight
+   ahead, car->servoZeroUs) and its direction (car->servoDir) are
+   car-specific; the size of the scale is the same on every car (2026-11-07):
+   900 us and 2100 us were 62 deg to either side, so 124 deg over 1200 us.    */
+#define SERVO_DEG_PER_US  (124.0f / 1200.0f)    /* size only; x servoDir       */
 #define SERVO_MIN_US      900u       /* the course's servo range              */
 #define SERVO_MAX_US      2100u
 

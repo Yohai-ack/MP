@@ -1410,9 +1410,10 @@ wheels forward with the rear-right and front-left ones backward must move the ca
 \flag{Yohai: which motor drives which wheel differs from car to car (car 11 is wired unlike car 12), so the A2
 table gives no wheel positions; the A3 solution has a per-car map (\texttt{wheelMotor} in \texttt{car\_params.c}).
 Decide whether the students must find their own mapping (for example in A2, ``Check your cart'').}
-\flag{Yohai: car 12 needs the new servo-zero calibration (\texttt{/skl\_prj\_getCarParams}, step 5: step the servo
-until the sonar looks straight ahead). Its \texttt{servoZeroUs} = 1545\,$\mu$s is only derived from the old
-three-point calibration.}
+\flag{Yohai: the sonar scale of the A3 solution (\texttt{RAW\_PER\_MM\_X10} = 1019, offset $-6$\,mm in
+\texttt{ass3\_io.c}, from the A2 calibration on car 12 at 50 to 150\,mm) read 82\,mm for a box at 80\,mm but 183\,mm
+at 200\,mm on car 11 (2026-11-09): 17\,mm short. Check later with a third distance (400\,mm), measured from the
+front of the sonar, and refit if the scale is off.}
 \begin{enumerate}[label=B.\arabic*, leftmargin=2.2em]
   \item Write the program as a state machine (\texttt{enum} + \texttt{switch}). In the report, include the state
         diagram, with the condition of every transition. Present your choices (for example, the distance at which the

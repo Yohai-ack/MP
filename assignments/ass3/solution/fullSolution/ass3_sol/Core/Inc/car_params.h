@@ -52,6 +52,9 @@ typedef struct
                                    looks straight ahead (0 degrees); the
                                    scale, degrees per us, is the same on every
                                    car: SERVO_DEG_PER_US in ass3.h            */
+    int8_t   servoDir;          /* +1 if a longer pulse turns the sonar to
+                                   the LEFT, -1 if to the right (it differs
+                                   between cars: the servo's mounting)        */
 } CarParams;
 
 /* the parameters of car `carId`, or NULL if it is not in car_params.c */

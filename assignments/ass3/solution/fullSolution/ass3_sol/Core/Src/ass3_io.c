@@ -145,7 +145,7 @@ void servoSetUs(uint16_t us)
 /* the direction the sonar looks at, in degrees from straight ahead, + left */
 float servoAngleDeg(uint16_t us)
 {
-    return ((float)us - (float)car->servoZeroUs) * SERVO_DEG_PER_US;
+    return ((float)us - (float)car->servoZeroUs) * SERVO_DEG_PER_US * (float)car->servoDir;
 }
 
 /* the pulse at which the sonar looks straight ahead (0 degrees) */

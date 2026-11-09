@@ -1,6 +1,6 @@
 ---
 name: skl_prj_getCarParams
-description: Measure the car-specific parameters of ONE MP cart (STM32 repo), given its number as the argument (/skl_prj_getCarParams 12), interactively with Yohai at the cart, and write them into the A3 solution's car_params.c. Step 1 spins each motor with DIR = 1 (Yohai says which wheel turned, forward or backward) for wheelMotor (the motor-to-wheel map, which differs between cars), motorDir and encDir; step 2 has Yohai turn each wheel 3 turns by hand for countsPerRev; step 3 records an open-loop 50 % step of each wheel, fits K and tau, designs Kp and Ki for no overshoot and a closed-loop time constant tauC (default 0.032 s), and computes maxVelCmdNoSat; step 5 finds the servo zero (the pulse at which the sonar looks straight ahead, by stepping the servo while Yohai watches) and the IR sensor's obstacle level. Use when Yohai invokes /skl_prj_getCarParams or asks to measure, calibrate or add the parameters of a car.
+description: Measure the car-specific parameters of ONE MP cart (STM32 repo), given its number as the argument (/skl_prj_getCarParams 12), interactively with Yohai at the cart, and write them into the A3 solution's car_params.c. Step 1 spins each motor with DIR = 1 (Yohai says which wheel turned, forward or backward) for wheelMotor (the motor-to-wheel map, which differs between cars), motorDir and encDir; step 2 has Yohai turn each wheel 3 turns by hand for countsPerRev; step 3 records an open-loop 50 % step of each wheel, fits K and tau, designs Kp and Ki for no overshoot and a closed-loop time constant tauC (default 0.032 s), and computes maxVelCmdNoSat; step 5 finds the servo direction and zero (the pulse at which the sonar looks straight ahead, by stepping the servo while Yohai watches) and the IR sensor's obstacle level. Use when Yohai invokes /skl_prj_getCarParams or asks to measure, calibrate or add the parameters of a car.
 ---
 
 # skl_prj_getCarParams: the parameters of one car
@@ -62,19 +62,22 @@ port, as the autotest does.
 5. **Servo and IR sensor** (ask "ready?": it flashes the A3 solution, `ass3_sol/Debug/ass3_sol.elf`, build it first
    if it is missing; the board resets and only the servo moves). `... car_params_tool.py calstart` runs task 900 with
    the servo at 1500 us.
-   - **Servo zero** (the only car-specific servo value): find the pulse at which the sonar looks straight ahead.
-     Yohai watches; after each move ask him "more", "less" or "good". Steps of 50 us
-     (`... servo 1550`, `... servo 1600`, ...; "less" goes the other way), and once he says "too far", go back halfway
-     and continue in steps of 10 us (a 10 us step is about 1 degree). A longer pulse turns the sonar to the right.
+   - **Servo direction** (car-specific: car 11 turns right for a longer pulse, car 12 left): first ask Yohai where
+     the sonar looks at 1500 us (left, right, or straight), then move it to 1550 us and ask which way it turned.
+     Write it: `... car_params_tool.py setdir X <+1|-1>` (+1 if the longer pulse turned it LEFT, -1 if right).
+   - **Servo zero**: find the pulse at which the sonar looks straight ahead.
+     Yohai watches; after each move ask him "more", "less" or "good". Steps of 50 us towards straight ahead (the
+     direction from the step above), and once he says "too far", go back halfway
+     and continue in steps of 10 us (a 10 us step is about 1 degree).
      Write it: `... car_params_tool.py setzero X <us>`. (Car 11, 2026-11-09: 1575 us.)
-   - The scale is NOT car-specific: SERVO_DEG_PER_US in `ass3.h` (-124 deg / 1200 us, + left, measured on car 12).
+   - The size of the scale is NOT car-specific: SERVO_DEG_PER_US in `ass3.h` (124 deg / 1200 us, times servoDir).
      The course scans symmetrically about the zero, within 900 to 2100 us.
    - **IR:** `... ir` with nothing in front of the IR sensor, then with a hand about 5 cm in front (ask him to say
      "go" before each); irObstacleLevel is the level read with the hand. Write it: `... car_params_tool.py setir X <0|1>`.
-   `setzero` and `setir` can run before steps 1 to 4: a car with no entry gets a partial one, which carParamsGet
-   refuses (so the A3 solution does not drive it) until `write` adds the wheels; `write` keeps both sensor lines.
+   `setdir`, `setzero` and `setir` can run before steps 1 to 4: a car with no entry gets a partial one, which carParamsGet
+   refuses (so the A3 solution does not drive it) until `write` adds the wheels; `write` keeps the sensor lines.
 6. **Check and report.** Compile-check `car_params.c` (`arm-none-eabi-gcc -c ... -Wall -Wextra`, 0 warnings). Report a
    table per wheel: motorDir, encDir, countsPerRev, K, tau, Kp, Ki, maxVelCmdNoSat, and say which wheel limits the
-   speed (the A3 solution drives at 0.9 x the smallest maxVelCmdNoSat). Add irObstacleLevel and servoZeroUs to the report. Note anything unusual (a wheel much weaker,
+   speed (the A3 solution drives at 0.9 x the smallest maxVelCmdNoSat). Add irObstacleLevel, servoDir and servoZeroUs to the report. Note anything unusual (a wheel much weaker,
    a fit rms well above one count step). Add a line to MP.md. Remind Yohai that the cart still runs the temporary
    copy of the A2 reference, and ask before committing.

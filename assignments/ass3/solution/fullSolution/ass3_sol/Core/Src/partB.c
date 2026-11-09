@@ -72,7 +72,7 @@ static uint16_t scanUs(uint8_t i)
 /* +1 if a longer pulse turns the sonar to the left */
 static int8_t usLeft(void)
 {
-    return (SERVO_DEG_PER_US > 0.0f) ? 1 : -1;
+    return car->servoDir;
 }
 
 /* the scan direction closest to straight ahead */

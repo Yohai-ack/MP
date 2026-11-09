@@ -415,12 +415,13 @@ confirm once on the floor (red flag in the A3 section of the plan). Overall size
 wheels), 300 mm long (sensors to the rear): CAR_HALF_WIDTH_MM 120, CAR_LENGTH_MM 300.
 **IR level and servo zero are car parameters** (car_params.c: irObstacleLevel, servoZeroUs), measured by step 5 of
 the skill with TA task 900 of ass3_sol (the servo follows `calServoUs`, the IR pin printed). **Servo (Yohai,
-2026-11-09): only the zero is car-specific** (the pulse at which the sonar looks straight ahead, found by stepping
-the servo 50 us, then 10 us, while Yohai watches; 1500 us is only the servo's own mid-travel, the holder's mounting
-shifts it). The scale is shared, `SERVO_DEG_PER_US` = -124/1200 deg/us in ass3.h (+ left: a longer pulse turns
-right), from car 12's 2026-11-07 readings (900 us 62 deg left, 1500 us 5 deg left, 2100 us 62 deg right). The scan
-is symmetric about the zero within 900 to 2100 us. Car 12: IR 1 = obstacle; servoZeroUs 1545 derived from the old
-three-point readings, **to redo with the zero step** (red flag in A3). `carParamsGet` refuses an entry with Kp = 0 (partial) or a
+2026-11-09): the zero and the direction are car-specific** (servoZeroUs: the pulse at which the sonar looks straight
+ahead, found by stepping the servo 50 us, then 10 us, while Yohai watches; 1500 us is only the servo's own
+mid-travel, the holder's mounting shifts it. servoDir: +1 if a longer pulse turns the sonar LEFT; car 11 -1, car 12
++1, found when car 12's search went the wrong way). The size of the scale is shared, `SERVO_DEG_PER_US` = 124/1200
+deg/us in ass3.h, times servoDir (900 and 2100 us were 62 deg to either side). The scan is symmetric about the zero
+within 900 to 2100 us. Car 12: IR 1 = obstacle; servoZeroUs 1550, servoDir +1 (2026-11-09, socket supply; at
+1500 us it looked a little right). `carParamsGet` refuses an entry with Kp = 0 (partial) or a
 wheelMotor that is not 1..4 each once (the A3 solution halts before driving it).
 **Motor-to-wheel map is car-specific (Yohai, 2026-11-09):** car 11 is wired with motor 3 = front RIGHT and motor 4 =
 front LEFT (car 12: 3 front left, 4 front right). car_params.c now has `wheelMotor[4]` (the motor at rear right, rear
@@ -433,9 +434,23 @@ and step 2 goes by position: rear right, front right, then the left side (Yohai'
 speeds were all positive, so the signs are right); countsPerRev 1320 (by hand 1313.7 / 1316.0 / 1317.3 / 1321.0);
 K 3.48 / 3.41 / 3.23 / 3.22 rad/s/V, tau 0.089 / 0.102 / 0.079 / 0.103 s (fit rms 0.39 to 0.67): four well matched
 motors, much stronger than car 12's; Kp 0.80 / 0.93 / 0.77 / 1.00, Ki 9.0 / 9.2 / 9.7 / 9.7; maxVelCmdNoSat 12.14 /
-10.55 / 12.52 / 9.83 (motor 4 limits: the A3 speed is 0.9 x 9.83 = 8.85 rad/s); IR 1 = obstacle; servoZeroUs 1575
+10.55 / 12.52 / 9.83 (motor 4 limits: the A3 speed is 0.9 x 9.83 = 8.85 rad/s); IR 1 = obstacle; servoZeroUs 1575, servoDir -1
 (sonar holder assembled that day). The `.ioc` key `TIMx.EncoderMode=TIM_ENCODERMODE_TI12` was written by
 hand (main.c has TI12 too); not yet opened in CubeMX. Builds with 0 warnings (-Wall -Wextra).
+**A3 solution on car 11 (2026-11-09, USB + socket supply, in the air):** task 120 passed: all four wheels forward,
+mean 8.84 to 8.86 rad/s for the 8.85 command, peak control effort 9.7 V (no saturation), 63 % at 50 to 60 ms (design
+~42 ms) and a 3 to 5 % overshoot over 0.1 to 0.3 s (in the air the motor gain at ~2 V is ~4.4 rad/s/V, above the 6 V
+fit, so the PI zero does not cancel the pole exactly). Task 220: IR 1 for a box at 80 mm, 0 at 200 mm; sonar 82 mm at
+80 mm but 183 mm at 200 mm (17 mm short, accepted for now; red flag in the plan to check at 400 mm and refit).
+Button 3 during task 120: wheels stop at once, PWM 0, tasks refused, button 2 still sends the cut run. Course dry
+run in the air (box at 70 mm, mostly right, removed by hand after the scan): scan, left chosen (y = 236), strafe to
+y = 244, pass 720 mm (car length + 50 after the side clears), back to y = -8, forward again. In the air the box must
+be removed by the end of the scan: the strafe takes only ~1.3 s and then the IR watches ahead.
+**Open (2026-11-09, stopped here):** on the BATTERY the board does not run: button 0 did nothing, and with USB in the
+ST-LINK reads a target voltage of 1.7 V and "Unable to get core ID" (3.3 V expected). The supply switch shows its green
+LED in this position as with the socket supply, and the battery has voltage. Next: find why the battery position gives
+no 5 V on E5V (switch, battery connector, regulator), then the floor tests: A.3 step (button 0), USB re-plug + button 2,
+then one obstacle on the floor (STRAFE_SIGN). main.c has carId = 11 (not committed).
 **A2 reference solution (2026-10-29):** `assignments/ass2/solution/fullSolution/ass2_sol/`
 (CubeIDE project; `ass2_sol.ioc` = the TA's ass2.ioc, built from ass1.ioc + the configuration section and checked in
 the generated code; builds with 0 warnings) and `ass2_sol.tex` (TA report; the PDF is git-ignored). The constants were measured

@@ -18,6 +18,7 @@ that moves a wheel is run only after Yohai said "ready" (the skill asks). The wh
   ir                            (task 900) print the IR pin level, read 6 times over 3 s
   setir X LEVEL                 write car X's irObstacleLevel (1 high, 0 low) into car_params.c
   setzero X US                  write car X's servoZeroUs (the pulse that looks straight ahead) into car_params.c
+  setdir X +1|-1                write car X's servoDir: +1 if a longer pulse turns the sonar to the left, -1 right
   setmap X RR,RL,FL,FR          write car X's wheelMotor: the motor (1..4) at the rear right, rear left, front left
                                 and front right (found in step 1: which wheel each motor turned)
                                 (setir, setzero and setmap add a partial entry if car X has none yet; carParamsGet refuses
@@ -38,10 +39,11 @@ SOL3 = REPO / "assignments/ass3/solution/fullSolution"
 DATA = SOL3 / "car_data"
 PARAMS_C = SOL3 / "ass3_sol/Core/Src/car_params.c"
 ELF3 = SOL3 / "ass3_sol/Debug/ass3_sol.elf"
-SENSOR_FIELDS = ("irObstacleLevel", "wheelMotor", "servoZeroUs")
+SENSOR_FIELDS = ("irObstacleLevel", "wheelMotor", "servoZeroUs", "servoDir")
 SENSOR_DEFAULT = {"wheelMotor":      "        .wheelMotor      = { 1, 2, 3, 4 },             /* NOT YET MEASURED */\n",
 "irObstacleLevel": "        .irObstacleLevel = 1,                          /* NOT YET MEASURED */\n",
-                  "servoZeroUs":     "        .servoZeroUs     = 1500,                       /* NOT YET MEASURED */\n"}
+                  "servoZeroUs":     "        .servoZeroUs     = 1500,                       /* NOT YET MEASURED */\n",
+                  "servoDir":        "        .servoDir        = 0,                          /* NOT YET MEASURED */\n"}
 
 
 def sensor_line(entry, field):
@@ -285,6 +287,10 @@ def main():
         mp = [int(x) for x in sys.argv[3].split(",")]
         assert sorted(mp) == [1, 2, 3, 4], "the motors at RR,RL,FL,FR: 1..4, each once"
         cmd_setfield(int(sys.argv[2]), "wheelMotor", "{ %s }" % ", ".join(map(str, mp)))
+        return
+    if cmd == "setdir":
+        assert sys.argv[3] in ("+1", "1", "-1"), "DIR +1 (a longer pulse turns the sonar left) or -1 (right)"
+        cmd_setfield(int(sys.argv[2]), "servoDir", "%+d" % int(sys.argv[3]))
         return
     if cmd == "setzero":
         assert 900 <= int(sys.argv[3]) <= 2100, "900..2100 us"

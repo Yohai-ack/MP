@@ -26,11 +26,14 @@
  *            front of the sensor (task 900).
  *          servoZeroUs: the servo moved by hand commands (task 900) from
  *            1500 us, in steps of 50 us and then smaller, until the sonar
- *            looks straight ahead. The scale (degrees per us) is the same on
- *            every car: SERVO_DEG_PER_US in ass3.h.
+ *            looks straight ahead. The size of the scale (degrees per us) is
+ *            the same on every car: SERVO_DEG_PER_US in ass3.h.
+ *          servoDir: seen in the same search: +1 if a longer pulse turns the
+ *            sonar to the left, -1 if to the right.
  *
- *          An entry whose wheels are not measured yet (Kp = 0), or whose
- *          wheelMotor is not 1, 2, 3, 4 in some order, is refused by
+ *          An entry whose wheels are not measured yet (Kp = 0), whose servoDir
+ *          is not +1 or -1, or whose wheelMotor is not 1, 2, 3, 4 in some
+ *          order, is refused by
  *          carParamsGet, so that car cannot drive with made-up values.
  ******************************************************************************
  */
@@ -57,8 +60,8 @@ static const CarParams carParams[] =
         .designTauC      = 0.032f,
         .irObstacleLevel = 1,                          /* measured 2026-11-07 */
         .wheelMotor      = { 1, 2, 3, 4 },             /* measured 2026-11-07 */
-        .servoZeroUs     = 1545,                       /* REDO: from the old 3-point calibration
-                                                          (900/1500/2100 us = 62 L / 5 L / 62 R deg) */
+        .servoZeroUs     = 1550,                       /* measured 2026-11-09 */
+        .servoDir        = +1,                         /* measured 2026-11-09 */
     },
 
     /* car 11, measured 2026-11-09 (skl_prj_getCarParams). countsPerRev: 1320, 1320, 1320, 1320.
@@ -81,6 +84,7 @@ static const CarParams carParams[] =
         .irObstacleLevel = 1,                          /* measured 2026-11-09 */
         .wheelMotor      = { 1, 2, 4, 3 },             /* measured 2026-11-09 */
         .servoZeroUs     = 1575,                       /* measured 2026-11-09 */
+        .servoDir        = -1,                         /* measured 2026-11-09 */
     },
 };
 
@@ -89,7 +93,8 @@ const CarParams *carParamsGet(uint8_t carId)
     for (size_t i = 0; i < sizeof carParams / sizeof carParams[0]; i++)
     {
         const CarParams *c = &carParams[i];
-        if ((c->carId == carId) && (c->Kp[0] > 0.0f))          /* measured in full */
+        if ((c->carId == carId) && (c->Kp[0] > 0.0f) &&        /* measured in full */
+            ((c->servoDir == 1) || (c->servoDir == -1)))
         {
             uint8_t seen = 0;
             for (uint8_t p = 0; p < 4u; p++)
